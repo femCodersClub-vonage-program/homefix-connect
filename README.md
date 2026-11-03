@@ -1,6 +1,6 @@
 # Homefix Connect
 
-Aplicación web para simplificar la comunicación y coordinación de reparaciones en viviendas de alquiler. Permite registrar una avería, coordinar una visita virtual con un técnico, realizar una videollamada para evaluar el problema y comunicar el diagnóstico y los siguientes pasos.
+Aplicación web para coordinar la **visita virtual de una avería** en una vivienda de alquiler. El MVP parte de una **incidencia ya reportada con visita asignada**: la inquilina y el técnico entran a una videollamada 1-a-1, y al finalizar se envían SMS automáticos al gestor/propietario y a la inquilina notificando que la visita se realizó.
 
 ## 🎯 Problema que resuelve
 
@@ -10,36 +10,37 @@ La coordinación de una reparación puede requerir varios intercambios entre la 
 
 | Rol | Descripción |
 |-----|-------------|
-| **Inquilina** | Registra la avería, consulta su estado y participa en la visita virtual |
-| **Técnico** | Revisa la incidencia, participa en la visita, registra el diagnóstico y propone los siguientes pasos |
+| **Inquilina** | Reporta y consulta la incidencia, participa en la videollamada y recibe notificaciones |
+| **Técnico** | Participa en la visita virtual evaluando la avería |
 | **Propietaria / Gestora** | Consulta el estado y recibe avisos relevantes |
 
 ## 🚀 Flujo principal del MVP
 
-1. **Reporte** — La inquilina registra una incidencia con título, descripción, vivienda y prioridad
-2. **Programación** — Se propone y confirma una fecha y hora para una visita virtual
-3. **Notificación** — Las personas implicadas reciben la información relevante de la cita (SMS via Vonage)
-4. **Videollamada** — La inquilina y el técnico acceden a una sala de vídeo desde el navegador
-5. **Diagnóstico** — El técnico registra observaciones e indica si hace falta una reparación presencial
-6. **Seguimiento** — La incidencia se actualiza y se comunica el resultado y el siguiente paso
+> El MVP **no** cubre la creación de incidencias ni la propuesta de citas: arranca cuando la incidencia ya existe con una visita asignada.
+
+1. **Entrar a la videollamada** — La inquilina y el técnico acceden a una sala de vídeo 1-a-1 desde el navegador.
+2. **Videollamada** — Ambos se ven y oyen para evaluar la avería.
+3. **Fin de la visita → SMS** — Al colgar, se envían dos SMS automáticos (gestor/propietario e inquilina): *"Visita realizada. Cuando el informe esté listo te notificaremos."*
 
 ## 🛠 Stack tecnológico
 
 | Componente | Tecnología |
 |------------|------------|
-| **Backend** | Node.js + TypeScript + Express |
-| **Frontend** | React + TypeScript + Vite |
-| **Base de datos** | PostgreSQL / SQLite + Prisma ORM |
-| **Mensajería** | Vonage Messages API (SMS + webhooks) |
-| **Videollamada** | Vonage Video API + SDK Web |
-| **Testing** | Vitest / Jest + Postman |
+| **Backend** | Node.js + TypeScript + Express + Prisma ORM |
+| **Frontend** | React + TypeScript + Vite + TanStack Query |
+| **Base de datos** | PostgreSQL (docker-compose local) |
+| **Mensajería** | Vonage Messages API (SMS + webhooks de estado) |
+| **Videollamada** | Vonage Video API (Server SDK + Web SDK) |
+| **Testing** | Vitest (unit), Pact (contract), Supertest (integration), Playwright (e2e) |
 | **Webhooks local** | ngrok |
 | **CI/CD** | GitHub Actions |
+| **Observabilidad** | `pino` → logging a archivo (JSONL) |
 
 ## 📋 Requisitos previos
 
 - Node.js 18+
-- pnpm (recomendado) o npm
+- pnpm (recomendado)
+- Docker (para levantar PostgreSQL con `docker-compose`)
 - Cuenta de Vonage (para Messages API y Video API)
 - ngrok (para desarrollo local con webhooks)
 
@@ -50,28 +51,31 @@ La coordinación de una reparación puede requerir varios intercambios entre la 
 git clone <repo-url>
 cd homefix-connect
 
-# Instalar dependencias
+# Instalar dependencias (monorepo con pnpm workspaces)
 pnpm install
 
-# Copiar archivo de entorno de ejemplo
-cp .env.example .env
+# Levantar PostgreSQL
+docker-compose up -d postgres
 
-# Configurar variables de entorno en .env
-# Ver sección "Variables de entorno" abajo
+# Copiar archivos de entorno de ejemplo
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env
+
+# Configurar variables de entorno (ver sección abajo)
 ```
 
 ### Variables de entorno
 
+**`backend/.env`**
+
 ```env
 # Base de datos
 DATABASE_URL="postgresql://user:password@localhost:5432/homefix?schema=public"
-# O para SQLite en desarrollo:
-# DATABASE_URL="file:./dev.db"
 
 # Vonage Messages API
-VONAGE_API_KEY="your_api_key"
-VONAGE_API_SECRET="your_api_secret"
-VONAGE_SMS_FROM="Vonage APIs"
+VONAGE_MESSAGES_API_KEY="your_messages_api_key"
+VONAGE_MESSAGES_API_SECRET="your_messages_api_secret"
+VONAGE_SMS_FROM="Homefix"
 VONAGE_WEBHOOK_SECRET="your_webhook_secret"
 
 # Vonage Video API
@@ -84,36 +88,55 @@ VONAGE_VIDEO_PRIVATE_KEY_PATH="./private.key"
 PORT=3000
 NODE_ENV=development
 FRONTEND_URL="http://localhost:5173"
+WEBHOOK_BASE_URL="https://xxxx.ngrok-free.app"
 ```
 
-> ⚠️ **Seguridad**: Nunca subas el archivo `.env` ni claves privadas a Git. Usa `.env.example` como plantilla.
+**`frontend/.env`**
+
+```env
+VITE_API_BASE_URL="http://localhost:3000/api/v1"
+VITE_VONAGE_VIDEO_API_KEY="your_public_video_api_key"
+```
+
+> ⚠️ **Seguridad**: Nunca subas los archivos `.env` ni claves privadas a Git. Usa los `.env.example` como plantilla.
 
 ## 🏃‍♂️ Ejecución en desarrollo
 
 ```bash
-# Terminal 1: Backend
+# 1. PostgreSQL
+docker-compose up -d postgres
+
+# 2. Backend + Frontend (concurrently)
+pnpm dev            # backend:3000 + frontend:5173
+
+# 3. Webhooks local (terminal aparte)
+ngrok http 3000     # copiar URL https a WEBHOOK_BASE_URL en backend/.env
+```
+
+Comandos individuales, si se necesitan:
+
+```bash
 pnpm --filter backend dev
-
-# Terminal 2: Frontend
 pnpm --filter frontend dev
-
-# Terminal 3 (opcional): ngrok para webhooks
-ngrok http 3000
 ```
 
 ## 🧪 Testing
 
 ```bash
-# Ejecutar todos los tests
+# Todos los tests (unit + contract)
 pnpm test
+
+# Solo tests de contrato (Pact)
+pnpm test:contract
+
+# Solo tests end-to-end (Playwright)
+pnpm test:e2e
 
 # Tests con cobertura
 pnpm test:coverage
 
-# Tests solo backend
+# Por workspace
 pnpm --filter backend test
-
-# Tests solo frontend
 pnpm --filter frontend test
 ```
 
@@ -121,53 +144,70 @@ pnpm --filter frontend test
 
 ```
 homefix-connect/
-├── backend/                 # API REST (Express + TypeScript)
-│   ├── src/
-│   │   ├── routes/         # Endpoints de la API
-│   │   ├── services/       # Lógica de negocio + integraciones Vonage
-│   │   ├── prisma/         # Esquema y migraciones de BD
-│   │   └── utils/          # Helpers y validaciones
-│   └── tests/
-├── frontend/               # App React (Vite + TypeScript)
-│   ├── src/
-│   │   ├── components/     # Componentes UI reutilizables
-│   │   ├── pages/          # Páginas principales
-│   │   ├── hooks/          # Custom hooks
-│   │   ├── services/       # Cliente API + Vonage Video SDK
-│   │   └── types/          # Tipos TypeScript compartidos
-│   └── tests/
-├── docs/                   # Documentación del proyecto
+├── docs/                          # Documentación cross-cutting
+│   ├── MVP_DEFINITION.md
+│   ├── SDD_PLAN.md
 │   └── Homefix_Connect_MVP_Casos_de_Uso.md
-├── .github/workflows/      # CI/CD pipelines
+├── backend/                       # API REST (Express + TypeScript + Prisma)
+│   ├── docs/                      # Documentación backend-specific
+│   │   ├── AGENTS.md
+│   │   ├── SERVICES.md
+│   │   ├── WEBHOOKS.md
+│   │   ├── DATABASE.md
+│   │   └── TESTING.md
+│   ├── src/
+│   │   ├── routes/                # Endpoints de la API
+│   │   ├── services/              # Lógica de negocio + integraciones Vonage
+│   │   ├── webhooks/              # Webhooks Vonage (Video + Messages)
+│   │   ├── prisma/                # Esquema y migraciones de BD
+│   │   └── utils/                 # Helpers y validaciones
+│   ├── openapi.yaml               # Fuente de verdad de la API
+│   └── tests/
+├── frontend/                      # App React (Vite + TypeScript)
+│   ├── docs/                      # Documentación frontend-specific
+│   │   ├── AGENTS.md
+│   │   ├── COMPONENTS.md
+│   │   ├── STATE.md
+│   │   ├── VIDEO_INTEGRATION.md
+│   │   └── TESTING.md
+│   ├── src/
+│   │   ├── api/                   # Cliente generado desde OpenAPI
+│   │   ├── components/            # Componentes UI reutilizables
+│   │   ├── pages/                 # Páginas principales
+│   │   ├── hooks/                 # Custom hooks
+│   │   └── types/                 # Tipos TypeScript compartidos
+│   └── tests/
+├── .github/workflows/             # CI/CD pipelines
 ├── .gitignore
-├── package.json            # Workspace root (pnpm)
+├── docker-compose.yml             # PostgreSQL local
+├── package.json                   # Workspace root (pnpm)
 ├── pnpm-workspace.yaml
 └── README.md
 ```
 
 ## 📚 Documentación
 
-- [MVP y Casos de Uso](./docs/Homefix_Connect_MVP_Casos_de_Uso.md) — Definición completa del alcance, flujo, modelo de datos y endpoints
+- [Definición del MVP](./docs/MVP_DEFINITION.md) — Alcance reducido, escenarios Gherkin, APIs Vonage y criterios de aceptación
+- [Plan SDD](./docs/SDD_PLAN.md) — Metodología Specification-Driven Development, tareas de definición (D-01…D-07), testing, rotación del equipo
+- [MVP y Casos de Uso](./docs/Homefix_Connect_MVP_Casos_de_Uso.md) — Documento de definición inicial completo (referencia)
 
 ## 🔐 Seguridad
 
 - Las credenciales y claves privadas de Vonage se guardan en variables de entorno y **nunca** se suben a Git
 - Los tokens de vídeo se generan en el backend y solo se entregan a participantes autorizados
-- Los webhooks se validan según las capacidades de seguridad disponibles en Vonage
+- Los webhooks de Vonage se validan por firma HMAC
 - Los datos personales y teléfonos se limitan a lo necesario para la demo
 - No se grabarán videollamadas en el alcance inicial
 
 ## 🤝 Contribuir
 
-1. Fork el repositorio
-2. Crea una rama para tu feature (`git checkout -b feature/nueva-funcionalidad`)
-3. Commit tus cambios (`git commit -m 'feat: agregar nueva funcionalidad'`)
-4. Push a la rama (`git push origin feature/nueva-funcionalidad`)
-5. Abre un Pull Request
-
+1. Crea una rama desde `main` (`git checkout -b feature/<task-id>-<descripcion>`)
+2. Commit siguiendo [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`, `test:`…)
+3. Push a la rama (`git push origin feature/<task-id>-<descripcion>`)
+4. Abre un Pull Request (requiere CI verde + 1 approval)
 
 ---
 
 **Mentora**: Mariellys Soto  
 **Duración estimada**: 6 semanas  
-**Equipo**: FemCoders
+**Equipo**: 1 mentora + 3 desarrolladoras
