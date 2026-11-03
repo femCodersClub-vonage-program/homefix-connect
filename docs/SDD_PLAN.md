@@ -192,7 +192,8 @@ pnpm test            # unit + contract (debe pasar)
 
 | Semana | Dev 1 | Dev 2 | Dev 3 | Mentora |
 |--------|-------|-------|-------|---------|
-| 1-2 (Def) | D-01 (AGENTS) + D-03 (DATA_MODEL) | D-02 (ARCH) + D-04 (API) | D-05 (TASKS) + apoyo D-03 | Revisa todo, aprueba PRs |
+| 1 (Def) | D-01 (AGENTS raíz) | D-02 (ARCHITECTURE) | D-03 (DATA_MODEL + docker-compose) | Revisa PRs, aprueba |
+| 2 (Def) | D-04 (API_CONTRACTS) | D-05 (TASKS) + **D-06 (backend/docs/)** | D-05 (TASKS) + **D-07 (frontend/docs/)** | Revisa todo, aprueba PRs |
 | 3 | Backend-heavy (tokens) | Frontend-heavy (VideoCall) | Testing-heavy (contracts/unit) | Video SDK, unblocks |
 | 4 | Backend-heavy (webhooks/SMS) | Frontend-heavy (toast/estados) | Testing-heavy (integration/E2E) | Webhooks, SMS logic |
 | 5 | Edge cases backend | Edge cases frontend | E2E completo + a11y | Revisión integración |
@@ -227,7 +228,72 @@ Backlog → Definición (D-01..D-05) → Ready (specs done) → In Progress → 
 
 ---
 
-## 14. Cadencia de Reuniones (Acordado)
+## 14. Documentación por Workspace (Backend / Frontend)
+
+> Además de los docs cross-cutting en `docs/`, cada workspace tiene su **guía interna** para patrones locales, onboarding y contexto de IA.
+
+```
+homefix-connect/
+├── docs/                          ← Cross-cutting (equipo completo)
+│   ├── MVP_DEFINITION.md
+│   ├── SDD_PLAN.md
+│   ├── ARCHITECTURE.md
+│   ├── API_CONTRACTS.md
+│   ├── DATA_MODEL.md
+│   └── TASKS.md
+├── backend/
+│   ├── docs/                      ← Backend-specific (Definen en D-06)
+│   │   ├── AGENTS.md              ← Patrones: services, middleware, Prisma, Vonage SDK, logging, testing
+│   │   ├── SERVICES.md            ← VideoService, MessagingService, IncidentService...
+│   │   ├── WEBHOOKS.md            ← HMAC, reintentos, idempotencia, payloads Vonage
+│   │   ├── DATABASE.md            ← Prisma patterns, migraciones, seeds, queries comunes
+│   │   └── TESTING.md             ← Pact provider, Supertest, Testcontainers setup
+│   ├── src/
+│   └── package.json
+├── frontend/
+│   ├── docs/                      ← Frontend-specific (Definen en D-07)
+│   │   ├── AGENTS.md              ← Patrones: hooks, components, state, Vonage SDK, error boundaries
+│   │   ├── COMPONENTS.md          ← UI kit, VonageVideo, IncidentCard, Toast...
+│   │   ├── STATE.md               ← TanStack Query: keys, cache, invalidation
+│   │   ├── VIDEO_INTEGRATION.md   ← SDK init, tokens, reconexión, cleanup
+│   │   └── TESTING.md             ← Vitest + RTL, Playwright setup
+│   ├── src/
+│   └── package.json
+└── package.json (raíz)
+```
+
+### Qué define cada `AGENTS.md` (resumen)
+
+| `backend/docs/AGENTS.md` | `frontend/docs/AGENTS.md` |
+|--------------------------|---------------------------|
+| Services puras (sin Express), inyectables | Hooks con lógica de negocio separada |
+| Middleware chain: auth → validate → route | Components: presentacional vs contenedor |
+| Prisma: transacciones, `include` vs `select` | TanStack Query: queryKeys, staleTime, invalidation |
+| Vonage Server SDK: error handling, retries | Vonage Web SDK: init, events, cleanup en useEffect |
+| Logging: `pino` child loggers + correlationId | Error boundaries + toast notifications |
+| Testing: `describe` por service, mocks Vonage | Testing: render + userEvent, mock hooks |
+
+**Ventajas**: onboarding rápido, decisiones locales trazadas, IA contextual (Copilot lee el AGENTS.md del workspace donde estás).
+
+---
+
+## 15. Tareas de Definición Actualizadas (Semanas 1-2)
+
+| ID | Artefacto | Owner | Qué Define |
+|----|-----------|-------|------------|
+| **D-01** | `docs/AGENTS.md` (raíz) | Dev 1 | Flujo global, commits, branching, testing, Docker, constraints IA, troubleshooting, Vonage refs |
+| **D-02** | `docs/ARCHITECTURE.md` | Dev 2 | C4 diagrams, seguridad, observabilidad (logging archivo), despliegue local, ADR log, decisión Docker |
+| **D-03** | `docs/DATA_MODEL.md` | Dev 3 | Prisma schema, ER, seeds, índices, migraciones, consultas, `docker-compose.yml` Postgres |
+| **D-04** | `docs/API_CONTRACTS.md` + `backend/openapi.yaml` | Dev 1 | OpenAPI 3.1: endpoints, schemas, errores, webhooks Vonage, auth headers, Pact structure |
+| **D-05** | `docs/TASKS.md` | Dev 2 + Dev 3 | Breakdown S3-S6, vertical slices, rotación 3 devs, story points, GitHub Project columns, testing strategy |
+| **D-06** | `backend/docs/` (5 archivos) | Dev 2 | AGENTS.md, SERVICES.md, WEBHOOKS.md, DATABASE.md, TESTING.md — **patrones backend** |
+| **D-07** | `frontend/docs/` (5 archivos) | Dev 3 | AGENTS.md, COMPONENTS.md, STATE.md, VIDEO_INTEGRATION.md, TESTING.md — **patrones frontend** |
+
+> **D-06 y D-07** se hacen en **paralelo** en Semana 2 (mientras D-02, D-04, D-05). Cada dev documenta su área de ownership.
+
+---
+
+## 16. Cadencia de Reuniones (Acordado)
 
 | Qué | Cuándo | Duración | Quién |
 |-----|--------|----------|-------|
@@ -239,27 +305,29 @@ Backlog → Definición (D-01..D-05) → Ready (specs done) → In Progress → 
 
 ---
 
-## 15. Próximos Pasos Inmediatos — Para Empezar YA
+## 17. Próximos Pasos Inmediatos — Para Empezar YA
 
-1. **Crear issues D-01 a D-05 en GitHub Project #2** (asignar owners: Dev 1, 2, 3)
+1. **Crear issues D-01 a D-07 en GitHub Project #2** (asignar owners: Dev 1, 2, 3)
 2. **Inicializar monorepo** (`pnpm-workspace.yaml`, `package.json` root, workspaces backend/frontend)
 3. **Crear `docker-compose.yml` solo Postgres** (Dev 3 en D-03)
-4. **Semana 1**: Kickoff 30 min → Dev 1 empieza D-01 (`AGENTS.md`), Dev 3 empieza D-03 (`DATA_MODEL.md`) en paralelo
-5. **Semana 2**: Dev 2 hace D-02 (`ARCHITECTURE.md`), Dev 1 hace D-04 (`API_CONTRACTS.md`), Dev 2+3 hacen D-05 (`TASKS.md`)
+4. **Semana 1**: Kickoff 30 min → Dev 1 empieza D-01 (`docs/AGENTS.md`), Dev 3 empieza D-03 (`docs/DATA_MODEL.md`) en paralelo
+5. **Semana 2**: Dev 2 hace D-02 (`docs/ARCHITECTURE.md`), Dev 1 hace D-04 (`docs/API_CONTRACTS.md`), Dev 2+3 hacen D-05 (`docs/TASKS.md`) + **Dev 2 hace D-06 (`backend/docs/`)**, **Dev 3 hace D-07 (`frontend/docs/`)** en paralelo
 
 ---
 
-## 16. Checklist: ¿Están Listas las Tareas de Definición para Empezar?
+## 18. Checklist: ¿Están Listas las Tareas de Definición para Empezar?
 
 | Tarea | Artefacto | Owner | ¿Lista para empezar? | Qué necesita la dev día 1 |
 |-------|-----------|-------|---------------------|---------------------------|
-| **D-01** | `AGENTS.md` | Dev 1 | ✅ Sí | Ver `MVP_DEFINITION.md`, este `SDD_PLAN.md`, repo clonado |
-| **D-02** | `ARCHITECTURE.md` | Dev 2 | ✅ Sí | Ver `MVP_DEFINITION.md`, decidir C4 tool (Mermaid en MD), Docker decision |
-| **D-03** | `DATA_MODEL.md` | Dev 3 | ✅ Sí | Ver `MVP_DEFINITION.md`, Prisma docs, crear `docker-compose.yml` Postgres |
-| **D-04** | `API_CONTRACTS.md` + `openapi.yaml` | Dev 1 | ✅ Sí | Ver `MVP_DEFINITION.md` (endpoints + webhooks), OpenAPI 3.1 spec, Pact docs |
-| **D-05** | `TASKS.md` | Dev 2 + Dev 3 | ✅ Sí | Ver este `SDD_PLAN.md` (semanas 3-6), GitHub Project #2 columns |
+| **D-01** | `docs/AGENTS.md` (raíz) | Dev 1 | ✅ Sí | Ver `MVP_DEFINITION.md`, este `SDD_PLAN.md`, repo clonado |
+| **D-02** | `docs/ARCHITECTURE.md` | Dev 2 | ✅ Sí | Ver `MVP_DEFINITION.md`, decidir C4 tool (Mermaid en MD), Docker decision |
+| **D-03** | `docs/DATA_MODEL.md` | Dev 3 | ✅ Sí | Ver `MVP_DEFINITION.md`, Prisma docs, crear `docker-compose.yml` Postgres |
+| **D-04** | `docs/API_CONTRACTS.md` + `backend/openapi.yaml` | Dev 1 | ✅ Sí | Ver `MVP_DEFINITION.md` (endpoints + webhooks), OpenAPI 3.1 spec, Pact docs |
+| **D-05** | `docs/TASKS.md` | Dev 2 + Dev 3 | ✅ Sí | Ver este `SDD_PLAN.md` (semanas 3-6), GitHub Project #2 columns |
+| **D-06** | `backend/docs/` (5 archivos) | Dev 2 | ✅ Semana 2 | Ver `docs/ARCHITECTURE.md` (cuando exista), Prisma/Vonage patterns |
+| **D-07** | `frontend/docs/` (5 archivos) | Dev 3 | ✅ Semana 2 | Ver `docs/API_CONTRACTS.md` (tipos), Vonage Video SDK docs |
 
-**Todas las tareas D-01 a D-05 están definidas con owner, criterios de aceptación y dependencias claras. Pueden empezar mañana.**
+**Tareas D-01 a D-05**: listas para **Semana 1**. **D-06 y D-07**: listas para **Semana 2** (dependen de D-02/D-04).
 
 ---
 
