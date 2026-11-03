@@ -133,17 +133,19 @@ pnpm test            # unit + contract (debe pasar)
 
 ## 7. Tareas de Definición (Semanas 1-2) — Las Define el Equipo (3 Desarrolladoras)
 
-| ID | Artefacto | Qué Define | Owner (quién lo escribe) | Criterios de Aceptación |
-|----|-----------|------------|--------------------------|-------------------------|
-| **D-01** | `AGENTS.md` | Flujo trabajo, commits, branching, testing, Docker, constraints IA, troubleshooting, Vonage refs, **flujo diario real** | Dev 1 | Nueva persona onboardea en < 30 min; CI respeta constraints IA |
-| **D-02** | `ARCHITECTURE.md` | C4 diagrams (contexto, contenedores, componentes), seguridad, **observabilidad (solo logging a archivo)**, despliegue local, ADR log, decisión Docker | Dev 2 | Diagramas renderizan en GitHub; logging a archivo implementado |
-| **D-03** | `DATA_MODEL.md` | Esquema Prisma completo, ER diagram, seeds, índices, migraciones, consultas comunes, **docker-compose.yml para Postgres** | Dev 3 | `pnpm db:push` + `pnpm db:seed` + `docker-compose up -d` funcionan |
-| **D-04** | `API_CONTRACTS.md` + `backend/openapi.yaml` | OpenAPI 3.1: endpoints, schemas, errores, webhooks Vonage, auth headers, **Pact contract tests structure** | Dev 1 | `pnpm gen:types` genera types frontend sin errores; `pnpm test:contract` pasa (inicialmente rojo) |
-| **D-05** | `TASKS.md` | Breakdown semanal (S3-S6), vertical slices, rotación 3 devs, story points, GitHub Project columns, **testing strategy por tarea** | Dev 2 + Dev 3 | Issues creables en GitHub Project #2; cada tarea tiene test plan |
+| ID | Artefacto | Owner | Qué Define | Criterios de Aceptación |
+|----|-----------|-------|------------|-------------------------|
+| **D-01** | `docs/AGENTS.md` (raíz) | Dev 1 | Flujo global, commits, branching, testing, Docker, constraints IA, troubleshooting, Vonage refs, flujo diario real | Nueva persona onboardea en < 30 min; CI respeta constraints IA |
+| **D-02** | `docs/ARCHITECTURE.md` | Dev 2 | C4 diagrams, seguridad, observabilidad (solo logging a archivo), despliegue local, ADR log, decisión Docker | Diagramas renderizan en GitHub; logging a archivo definido |
+| **D-03** | `docs/DATA_MODEL.md` | Dev 3 | Prisma schema, ER, seeds, índices, migraciones, consultas comunes, `docker-compose.yml` Postgres | `pnpm db:push` + `pnpm db:seed` + `docker-compose up -d` funcionan |
+| **D-04** | `docs/API_CONTRACTS.md` + `backend/openapi.yaml` | Dev 1 | OpenAPI 3.1: endpoints, schemas, errores, webhooks Vonage, auth headers, Pact structure | `pnpm gen:types` genera types frontend sin errores; `pnpm test:contract` corre |
+| **D-05** | `docs/TASKS.md` | Dev 2 + Dev 3 | Breakdown S3-S6, vertical slices, rotación 3 devs, story points, GitHub Project columns, testing strategy por tarea | Issues creables en GitHub Project #2; cada tarea tiene test plan |
+| **D-06** | `backend/docs/` (5 archivos) | Dev 2 | AGENTS.md, SERVICES.md, WEBHOOKS.md, DATABASE.md, TESTING.md — **patrones backend** | Onboarding backend en < 20 min; patrones documentados |
+| **D-07** | `frontend/docs/` (5 archivos) | Dev 3 | AGENTS.md, COMPONENTS.md, STATE.md, VIDEO_INTEGRATION.md, TESTING.md — **patrones frontend** | Onboarding frontend en < 20 min; patrones documentados |
 
 **Rol de la mentora**: Revisa PRs, pregunta, desafía, aprueba — **NO escribe los documentos**.
 
-**Entregable Semana 2**: Los 5 artefactos aprobados en PR + `pnpm gen:types` verde + seed data cargado + `docker-compose up -d` funcional.
+**Entregable Semana 2**: Los 7 artefactos aprobados en PR + `pnpm gen:types` verde + seed data cargado + `docker-compose up -d` funcional.
 
 ---
 
@@ -275,25 +277,11 @@ homefix-connect/
 
 **Ventajas**: onboarding rápido, decisiones locales trazadas, IA contextual (Copilot lee el AGENTS.md del workspace donde estás).
 
----
-
-## 15. Tareas de Definición Actualizadas (Semanas 1-2)
-
-| ID | Artefacto | Owner | Qué Define |
-|----|-----------|-------|------------|
-| **D-01** | `docs/AGENTS.md` (raíz) | Dev 1 | Flujo global, commits, branching, testing, Docker, constraints IA, troubleshooting, Vonage refs |
-| **D-02** | `docs/ARCHITECTURE.md` | Dev 2 | C4 diagrams, seguridad, observabilidad (logging archivo), despliegue local, ADR log, decisión Docker |
-| **D-03** | `docs/DATA_MODEL.md` | Dev 3 | Prisma schema, ER, seeds, índices, migraciones, consultas, `docker-compose.yml` Postgres |
-| **D-04** | `docs/API_CONTRACTS.md` + `backend/openapi.yaml` | Dev 1 | OpenAPI 3.1: endpoints, schemas, errores, webhooks Vonage, auth headers, Pact structure |
-| **D-05** | `docs/TASKS.md` | Dev 2 + Dev 3 | Breakdown S3-S6, vertical slices, rotación 3 devs, story points, GitHub Project columns, testing strategy |
-| **D-06** | `backend/docs/` (5 archivos) | Dev 2 | AGENTS.md, SERVICES.md, WEBHOOKS.md, DATABASE.md, TESTING.md — **patrones backend** |
-| **D-07** | `frontend/docs/` (5 archivos) | Dev 3 | AGENTS.md, COMPONENTS.md, STATE.md, VIDEO_INTEGRATION.md, TESTING.md — **patrones frontend** |
-
 > **D-06 y D-07** se hacen en **paralelo** en Semana 2 (mientras D-02, D-04, D-05). Cada dev documenta su área de ownership.
 
 ---
 
-## 16. Cadencia de Reuniones (Acordado)
+## 15. Cadencia de Reuniones (Acordado)
 
 | Qué | Cuándo | Duración | Quién |
 |-----|--------|----------|-------|
@@ -305,7 +293,7 @@ homefix-connect/
 
 ---
 
-## 17. Próximos Pasos Inmediatos — Para Empezar YA
+## 16. Próximos Pasos Inmediatos — Para Empezar YA
 
 1. **Crear issues D-01 a D-07 en GitHub Project #2** (asignar owners: Dev 1, 2, 3)
 2. **Inicializar monorepo** (`pnpm-workspace.yaml`, `package.json` root, workspaces backend/frontend)
@@ -315,7 +303,7 @@ homefix-connect/
 
 ---
 
-## 18. Checklist: ¿Están Listas las Tareas de Definición para Empezar?
+## 17. Checklist: ¿Están Listas las Tareas de Definición para Empezar?
 
 | Tarea | Artefacto | Owner | ¿Lista para empezar? | Qué necesita la dev día 1 |
 |-------|-----------|-------|---------------------|---------------------------|
@@ -331,7 +319,7 @@ homefix-connect/
 
 ---
 
-## 17. Referencias Vonage (Para AGENTS.md / D-01)
+## 18. Referencias Vonage (Para AGENTS.md / D-01)
 
 - Video API 1-a-1: https://developer.vonage.com/en/learning-center/one-on-one-session-video-learning-path
 - Video SDK Web: https://developer.vonage.com/en/video/api-reference/client-sdk-javascript
