@@ -102,3 +102,12 @@ pnpm --filter frontend build
 - ❌ Cambiar `vite.config.ts` (proxy, `envDir`) sin avisar: afecta a todo el
   equipo.
 - ❌ Usar `any` para callar a TypeScript.
+
+## 10. Skills disponibles para esta capa
+
+Están instaladas localmente en `skills/` dentro del repositorio y se usan durante el desarrollo del frontend:
+
+- **`frontend-dev-guidelines`** (`skills/frontend-dev-guidelines/SKILL.md`): Directrices de estructura frontend con React y TypeScript, organización en componentes vs hooks, data-fetching con TanStack Query y TypeScript estricto.
+- **`vercel-react-best-practices`** (`skills/vercel-react-best-practices/SKILL.md`): Reglas de optimización de rendimiento: eliminar waterfalls en datos asíncronos, evitar re-renders innecesarios, lazy loading para componentes pesados y limpieza de efectos.
+- **`react-best-practices`** (`skills/react-best-practices/SKILL.md`): Patrones de diseño de componentes, composición limpia con props/children, custom hooks desacoplados y estado predecible.
+

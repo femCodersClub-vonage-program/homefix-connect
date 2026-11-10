@@ -127,3 +127,12 @@ pnpm db:push && pnpm db:seed
 - ❌ Añadir `cors({ origin: '*' })` en producción (en local ya está y es suficiente).
 - ❌ Instalar un ORM alternativo, un framework de validación distinto o un
   cliente HTTP extra.
+
+## 11. Skills disponibles para esta capa
+
+Están instaladas localmente en `skills/` dentro del repositorio y se usan durante el desarrollo del backend:
+
+- **`nodejs-backend-patterns`** (`skills/nodejs-backend-patterns/SKILL.md`): Buenas prácticas en Express y Node.js, arquitectura de capas (`routes/` ligeras, `services/` aislados, `db/`), validación con Zod y observabilidad con Pino.
+- **`architecture-patterns`** (`skills/architecture-patterns/SKILL.md`): Clean Architecture y Hexagonal para desacoplar lógica de negocio de adaptadores externos (Prisma, SDK de Vonage) y facilitar tests unitarios sin levantar servidores ni base de datos.
+- **`error-handling-patterns`** (`skills/error-handling-patterns/SKILL.md`): Manejo de excepciones por capas, captura centralizada en `errorHandler` y respuestas estandarizadas `{ "error": "mensaje" }` con códigos HTTP adecuados.
+
