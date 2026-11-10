@@ -14,10 +14,10 @@
 MVP de **videollamada 1-a-1** entre inquilina y técnica para evaluar una avería.
 Al colgar, se envían **2 SMS** (gestora + inquilina) con Vonage Messages.
 
-- Alcance y casos de uso: [`docs/MVP_DEFINITION.md`](./MVP_DEFINITION.md)
-- Tareas y orden de toma: [`docs/TASKS.md`](./TASKS.md)
-- Cómo levantar el proyecto: [`docs/LOCAL_SETUP.md`](./LOCAL_SETUP.md)
-- Decisiones de arquitectura: [`docs/ARCHITECTURE.md`](./ARCHITECTURE.md)
+- Alcance y casos de uso: [`docs/MVP_DEFINITION.md`](./docs/MVP_DEFINITION.md)
+- Tareas y orden de toma: [`docs/TASKS.md`](./docs/TASKS.md)
+- Cómo levantar el proyecto: [`docs/LOCAL_SETUP.md`](./docs/LOCAL_SETUP.md)
+- Decisiones de arquitectura: [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md)
 
 **Fuera de alcance** (no lo implementes aunque parezca fácil): crear
 incidencias, proponer/confirmar citas, login real, dashboard de listados,
@@ -82,7 +82,7 @@ se añaden sin un ADR aprobado.
 > `frontend/src/api/http.ts`.
 
 Todo el detalle (qué deberías ver, cómo apagar, errores comunes) está en
-[`docs/LOCAL_SETUP.md`](./LOCAL_SETUP.md).
+[`docs/LOCAL_SETUP.md`](./docs/LOCAL_SETUP.md).
 
 ---
 
@@ -268,7 +268,7 @@ docker compose ps                  # homefix-db en healthy
 tail -f backend/logs/app.jsonl     # aparece tu petición en JSONL
 ```
 
-**Criterio de "Done"** (resumen de [`docs/TASKS.md`](./TASKS.md) §12):
+**Criterio de "Done"** (resumen de [`docs/TASKS.md`](./docs/TASKS.md) §12):
 
 - [ ] Caso de uso cumplido y criterio de aceptación marcado en el issue
 - [ ] Decisiones de refinamiento anotadas en el issue
@@ -282,7 +282,7 @@ tail -f backend/logs/app.jsonl     # aparece tu petición en JSONL
 
 ## 14. Si te bloqueas
 
-1. Mira [`docs/LOCAL_SETUP.md`](./LOCAL_SETUP.md) §10 (errores comunes).
+1. Mira [`docs/LOCAL_SETUP.md`](./docs/LOCAL_SETUP.md) §10 (errores comunes).
 2. Comenta en el issue qué has probado y qué esperabas.
 3. Llévalo al sync (2×/semana, máx. 30 min). Todo lo demás, async.
 

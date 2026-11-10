@@ -5,7 +5,7 @@
 > arquitectónico, no en un documento aparte.
 >
 > Última revisión: 2026-11-10 · Alcance: [`MVP_DEFINITION.md`](./MVP_DEFINITION.md)
-> · Tareas: [`TASKS.md`](./TASKS.md) · Proceso: [`AGENTS.md`](./AGENTS.md)
+> · Tareas: [`TASKS.md`](./TASKS.md) · Proceso: [`AGENTS.md`](../AGENTS.md)
 
 ---
 

@@ -3,7 +3,7 @@
 > **Plazo**: el proyecto empezó hace 2 semanas; **quedan 4 semanas**.
 > **Objetivo**: tener en local, lo antes posible, una **videollamada 1-a-1 con Vonage Video** y, al colgar, **2 SMS con Vonage Messages**. Backend-first; frontend mínimo.
 >
-> **Referencias**: [`MVP_DEFINITION.md`](./MVP_DEFINITION.md) · [`SDD_PLAN.md`](./SDD_PLAN.md) · [`AGENTS.md`](./AGENTS.md) · [`ARCHITECTURE.md`](./ARCHITECTURE.md) · [`LOCAL_SETUP.md`](./LOCAL_SETUP.md)
+> **Referencias**: [`MVP_DEFINITION.md`](./MVP_DEFINITION.md) · [`SDD_PLAN.md`](./SDD_PLAN.md) · [`AGENTS.md`](../AGENTS.md) · [`ARCHITECTURE.md`](./ARCHITECTURE.md) · [`LOCAL_SETUP.md`](./LOCAL_SETUP.md)
 
 ---
 
@@ -131,7 +131,7 @@ Solo estas son **dependencia dura**. Todas pequeñas.
 
 | ID | Tarea | Size | Labels | Cuándo |
 |----|-------|------|--------|--------|
-| **D-01** | `docs/AGENTS.md` (commits, ramas, testing, constraints IA, entorno) | S | docs | Semana 1 |
+| **D-01** | `AGENTS.md` (commits, ramas, testing, constraints IA, entorno) | S | docs | Semana 1 |
 | **D-02** | `docs/ARCHITECTURE.md` v0 (ADR-lite + 1 diagrama) | S | docs | Semana 1 |
 
 > `D-06` / `D-07` (docs por workspace) quedan **fuera** del plazo; se abordan solo si sobra tiempo en la semana 4. Los `AGENTS.md` finos de `backend/` y `frontend/` ya existen (deltas de capa, no manuales completos).

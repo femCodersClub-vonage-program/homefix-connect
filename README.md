@@ -157,8 +157,8 @@ existen.
 
 ```
 homefix-connect/
+├── AGENTS.md                      # Guía de trabajo (ramas, commits, IA, tests)
 ├── docs/                          # Documentación cross-cutting
-│   ├── AGENTS.md                  # Guía de trabajo (ramas, commits, IA, tests)
 │   ├── ARCHITECTURE.md            # v0: ADRs + diagramas
 │   ├── LOCAL_SETUP.md             # Cómo levantar y apagar el proyecto
 │   ├── MVP_DEFINITION.md          # Alcance y escenarios Gherkin
@@ -199,7 +199,7 @@ homefix-connect/
 ## 📚 Documentación
 
 - [Guía de puesta en marcha](./docs/LOCAL_SETUP.md) — Instalar, levantar, comprobar y apagar, paso a paso
-- [AGENTS.md](./docs/AGENTS.md) — Ramas, commits, testing, entorno y constraints para IA
+- [AGENTS.md](./AGENTS.md) — Ramas, commits, testing, entorno y constraints para IA
 - [Arquitectura v0](./docs/ARCHITECTURE.md) — ADRs, diagramas, seguridad y observabilidad
 - [Plan de tareas](./docs/TASKS.md) — Oleadas, dependencias y orden de toma
 - [Definición del MVP](./docs/MVP_DEFINITION.md) — Alcance, escenarios Gherkin, APIs Vonage y criterios de aceptación
@@ -224,7 +224,7 @@ homefix-connect/
 4. `pnpm check && pnpm test` en verde
 5. Abre un Pull Request: **CI verde + 1 approval** → **squash merge**
 
-Detalle completo en [`docs/AGENTS.md`](./docs/AGENTS.md).
+Detalle completo en [`AGENTS.md`](./AGENTS.md).
 
 ---
 

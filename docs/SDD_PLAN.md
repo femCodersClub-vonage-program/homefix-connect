@@ -139,7 +139,7 @@ El desglose completo y vivo está en [`TASKS.md`](./TASKS.md). En definición qu
 
 | ID | Artefacto | Owner | Qué Define | Criterios de Aceptación |
 |----|-----------|-------|------------|-------------------------|
-| **D-01** | `docs/AGENTS.md` (raíz) | Dev 1 | Flujo global, commits, branching, testing, Docker, constraints IA, troubleshooting, Vonage refs | Nueva persona onboardea en < 30 min; CI respeta constraints IA |
+| **D-01** | `AGENTS.md` (raíz) | Dev 1 | Flujo global, commits, branching, testing, Docker, constraints IA, troubleshooting, Vonage refs | Nueva persona onboardea en < 30 min; CI respeta constraints IA |
 | **D-02** | `docs/ARCHITECTURE.md` v0 | Dev 2 | ADR-lite (decisiones), 1 diagrama de contenedores, seguridad, observabilidad (logging a archivo), Docker | Decisiones trazables; diagrama renderiza en GitHub |
 | **T1** | `backend/openapi.yaml` | Dev 2 | Contrato API (schemas + paths + `gen:types`) | `pnpm gen:types` sin errores |
 | **T2** | `backend/prisma/schema.prisma` + `docker-compose.yml` | Dev 3 | Modelo de datos, DB local, seed | `docker-compose up -d` + `db:push` + `db:seed` OK |
@@ -317,7 +317,7 @@ homefix-connect/
 
 | Tarea | Artefacto | ¿Lista para empezar? | Qué necesita la dev día 1 |
 |-------|-----------|---------------------|---------------------------|
-| **D-01** | `docs/AGENTS.md` | ✅ Sí | Ver `MVP_DEFINITION.md`, `TASKS.md`, repo clonado |
+| **D-01** | `AGENTS.md` | ✅ Sí | Ver `MVP_DEFINITION.md`, `TASKS.md`, repo clonado |
 | **D-02** | `docs/ARCHITECTURE.md` v0 | ✅ Sí | Ver `MVP_DEFINITION.md`, decidir Mermaid, Docker decision |
 | **T1** | `backend/openapi.yaml` | ✅ Sí | Ver `MVP_DEFINITION.md`, OpenAPI 3.1 |
 | **T2** | `backend/prisma/schema.prisma` + docker | ✅ Sí | Ver `MVP_DEFINITION.md`, Prisma docs |

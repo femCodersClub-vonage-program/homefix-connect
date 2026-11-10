@@ -1,6 +1,6 @@
 # backend/AGENTS.md — Reglas de la capa backend
 
-> **Deltas sobre [`docs/AGENTS.md`](../docs/AGENTS.md).** Si algo no está aquí,
+> **Deltas sobre [`AGENTS.md`](../AGENTS.md).** Si algo no está aquí,
 > aplica la guía raíz. Este archivo no repite reglas globales.
 
 ---
