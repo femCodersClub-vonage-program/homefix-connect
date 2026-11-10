@@ -139,12 +139,14 @@ El desglose completo y vivo está en [`TASKS.md`](./TASKS.md). En definición qu
 
 | ID | Artefacto | Owner | Qué Define | Criterios de Aceptación |
 |----|-----------|-------|------------|-------------------------|
-| **D-01** | `docs/AGENTS.md` (raíz) | Dev 1 | Flujo global, commits, branching, testing, Docker, constraints IA, troubleshooting, Vonage refs | Nueva persona onboardea en < 30 min; CI respeta constraints IA |
+| **D-01** | `AGENTS.md` (raíz) | Dev 1 | Flujo global, commits, branching, testing, Docker, constraints IA, troubleshooting, Vonage refs | Nueva persona onboardea en < 30 min; CI respeta constraints IA |
 | **D-02** | `docs/ARCHITECTURE.md` v0 | Dev 2 | ADR-lite (decisiones), 1 diagrama de contenedores, seguridad, observabilidad (logging a archivo), Docker | Decisiones trazables; diagrama renderiza en GitHub |
 | **T1** | `backend/openapi.yaml` | Dev 2 | Contrato API (schemas + paths + `gen:types`) | `pnpm gen:types` sin errores |
 | **T2** | `backend/prisma/schema.prisma` + `docker-compose.yml` | Dev 3 | Modelo de datos, DB local, seed | `docker-compose up -d` + `db:push` + `db:seed` OK |
 
 > **Nota**: `D-03`/`D-04`/`D-05` del plan anterior se absorbieron en `T2`/`T1`/`TASKS.md`. `D-06`/`D-07` (docs por workspace) quedan **fuera del plazo**.
+>
+> **Nota de ejecución**: el bootstrap de la semana 1 (T0, T2, X2, D-01, D-02) lo hizo la mentora para desbloquear al equipo antes de que arrancaran los carriles. A partir de aquí, **el equipo revisa, mantiene y amplía** estos documentos en sus PRs: la mentora no vuelve a escribirlos sola.
 
 **Rol de la mentora**: Revisa PRs, pregunta, desafía, aprueba — **NO escribe los documentos**.
 
@@ -284,7 +286,7 @@ homefix-connect/
 
 **Ventajas**: onboarding rápido, decisiones locales trazadas, IA contextual (Copilot lee el AGENTS.md del workspace donde estás).
 
-> **D-06 y D-07** (docs por workspace) quedan **fuera del plazo de 4 semanas**. Se abordan solo si sobra tiempo en la semana 4.
+> **D-06 y D-07** (docs por workspace) quedan **fuera del plazo de 4 semanas**. Se abordan solo si sobra tiempo en la semana 4. Los `AGENTS.md` finos de `backend/` y `frontend/` ya están creados (deltas de capa que enlazan al raíz).
 
 ---
 
@@ -315,7 +317,7 @@ homefix-connect/
 
 | Tarea | Artefacto | ¿Lista para empezar? | Qué necesita la dev día 1 |
 |-------|-----------|---------------------|---------------------------|
-| **D-01** | `docs/AGENTS.md` | ✅ Sí | Ver `MVP_DEFINITION.md`, `TASKS.md`, repo clonado |
+| **D-01** | `AGENTS.md` | ✅ Sí | Ver `MVP_DEFINITION.md`, `TASKS.md`, repo clonado |
 | **D-02** | `docs/ARCHITECTURE.md` v0 | ✅ Sí | Ver `MVP_DEFINITION.md`, decidir Mermaid, Docker decision |
 | **T1** | `backend/openapi.yaml` | ✅ Sí | Ver `MVP_DEFINITION.md`, OpenAPI 3.1 |
 | **T2** | `backend/prisma/schema.prisma` + docker | ✅ Sí | Ver `MVP_DEFINITION.md`, Prisma docs |

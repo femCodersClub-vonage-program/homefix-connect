@@ -3,7 +3,20 @@
 > **Plazo**: el proyecto empezó hace 2 semanas; **quedan 4 semanas**.
 > **Objetivo**: tener en local, lo antes posible, una **videollamada 1-a-1 con Vonage Video** y, al colgar, **2 SMS con Vonage Messages**. Backend-first; frontend mínimo.
 >
-> **Referencias**: [`MVP_DEFINITION.md`](./MVP_DEFINITION.md) · [`SDD_PLAN.md`](./SDD_PLAN.md)
+> **Referencias**: [`MVP_DEFINITION.md`](./MVP_DEFINITION.md) · [`SDD_PLAN.md`](./SDD_PLAN.md) · [`AGENTS.md`](../AGENTS.md) · [`ARCHITECTURE.md`](./ARCHITECTURE.md) · [`LOCAL_SETUP.md`](./LOCAL_SETUP.md)
+
+---
+
+## 0. Estado actual (2026-11-10)
+
+| Hecho | Dónde |
+|---|---|
+| **T0** monorepo, **T2** Prisma + Docker + seed, **X2** CI | PR #27 (`chore/foundation`) — CI verde |
+| Guía de arranque `docs/LOCAL_SETUP.md` | PR #27 |
+| **D-01** `AGENTS.md` (raíz + capas) y **D-02** `ARCHITECTURE.md` v0 | rama `docs/foundation-docs` |
+
+**Siguiente fila de la cola**: `T1` (contrato OpenAPI), `X1` (interfaces + stubs),
+`X3` (HMAC). Después, la fila 3 (`A1`, `A2`, `B1`, `C1`, `C2`, `C3`).
 
 ---
 
@@ -42,6 +55,14 @@ Antes de escribir código, quien toma el issue completa en el propio issue:
 ## Criterio de aceptación (fijo, conductual)
 - [ ] <resultado observable>
 
+## Qué hace / cómo lo hace (a completar antes de empezar)
+- Qué: <resultado observable en una frase>
+- Cómo: <enfoque y piezas tocadas>
+
+## Datos mínimos
+- Campos: <solo los que el criterio de aceptación necesita>
+- Estados / enums: <del flujo del MVP, sin añadidos>
+
 ## A refinar por quien toma la tarea (antes de empezar)
 - [ ] Forma del payload / campos necesarios
 - [ ] Estados / enums / nombres
@@ -54,6 +75,8 @@ Antes de escribir código, quien toma el issue completa en el propio issue:
 ```
 
 > Si al refinar la tarea crece > 1 día → se **parte en dos issues** antes de empezar.
+>
+> Regla completa de especificación incompleta y datos mínimos: [`AGENTS.md`](../AGENTS.md) §5.1.
 
 ---
 
@@ -118,10 +141,10 @@ Solo estas son **dependencia dura**. Todas pequeñas.
 
 | ID | Tarea | Size | Labels | Cuándo |
 |----|-------|------|--------|--------|
-| **D-01** | `docs/AGENTS.md` (commits, ramas, testing, constraints IA, entorno) | S | docs | Semana 1 |
+| **D-01** | `AGENTS.md` (commits, ramas, testing, constraints IA, entorno) | S | docs | Semana 1 |
 | **D-02** | `docs/ARCHITECTURE.md` v0 (ADR-lite + 1 diagrama) | S | docs | Semana 1 |
 
-> `D-06` / `D-07` (docs por workspace) quedan **fuera** del plazo; se abordan solo si sobra tiempo en la semana 4.
+> `D-06` / `D-07` (docs por workspace) quedan **fuera** del plazo; se abordan solo si sobra tiempo en la semana 4. Los `AGENTS.md` finos de `backend/` y `frontend/` ya existen (deltas de capa, no manuales completos).
 
 ---
 
@@ -216,7 +239,7 @@ T0 + T1 + T2 + X1 + X3  (semana 1)
 I1 (integración real con ngrok) → DEMO
 ```
 
-**Resultado**: dos pestañas (inquilina + técnico) entran a la videollamada 1-a-1; al colgar, `session.end` dispara 2 SMS reales y el frontend muestra "Visita finalizada".
+**Resultado**: dos pestañas (inquilina + técnica) entran a la videollamada 1-a-1; al colgar, `session.end` dispara 2 SMS reales y el frontend muestra "Visita finalizada".
 
 ---
 
