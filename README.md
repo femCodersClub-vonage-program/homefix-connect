@@ -2,6 +2,8 @@
 
 Aplicación web para coordinar la **visita virtual de una avería** en una vivienda de alquiler. El MVP parte de una **incidencia ya reportada con visita asignada**: la inquilina y el técnico entran a una videollamada 1-a-1, y al finalizar se envían SMS automáticos al gestor/propietario y a la inquilina notificando que la visita se realizó.
 
+> **¿Primera vez en el repo?** Guía paso a paso para instalar, levantar, comprobar y apagar el proyecto: [`docs/LOCAL_SETUP.md`](docs/LOCAL_SETUP.md).
+
 ## 🎯 Problema que resuelve
 
 La coordinación de una reparación puede requerir varios intercambios entre la persona que reporta la avería y el técnico. La información puede quedar dispersa y las personas implicadas pueden no conocer el estado de la incidencia o la fecha de la visita.
