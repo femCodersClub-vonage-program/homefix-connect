@@ -1,0 +1,138 @@
+// Modelo de datos v0 — Homefix Connect
+//
+// PROVISIONAL. Define solo lo que el MVP necesita para el flujo
+// incidencia → visita → videollamada → SMS.
+// Se refina en el PR de la tarea que lo necesite (no antes).
+// Ver docs/TASKS.md §"Qué está fijo y qué se refina".
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  TENANT
+  TECHNICIAN
+  MANAGER
+}
+
+enum IncidentStatus {
+  REPORTED
+  VISIT_ASSIGNED
+  VIDEO_COMPLETED
+  CLOSED
+}
+
+enum VisitStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+enum VideoSessionStatus {
+  PENDING
+  ACTIVE
+  ENDED
+}
+
+enum NotificationChannel {
+  SMS
+}
+
+enum NotificationStatus {
+  QUEUED
+  SUBMITTED
+  DELIVERED
+  FAILED
+}
+
+model User {
+  id    String  @id @default(cuid())
+  name  String
+  phone String
+  email String?
+  role  Role
+
+  incidentsAsTenant     Incident[]     @relation("IncidentTenant")
+  incidentsAsTechnician Incident[]     @relation("IncidentTechnician")
+  incidentsAsManager    Incident[]     @relation("IncidentManager")
+  notifications         Notification[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Incident {
+  id           String         @id @default(cuid())
+  title        String
+  description  String?
+  status       IncidentStatus @default(REPORTED)
+
+  tenantId     String
+  tenant       User    @relation("IncidentTenant", fields: [tenantId], references: [id])
+  technicianId String?
+  technician   User?   @relation("IncidentTechnician", fields: [technicianId], references: [id])
+  managerId    String?
+  manager      User?   @relation("IncidentManager", fields: [managerId], references: [id])
+
+  visit         Visit?
+  notifications Notification[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+}
+
+model Visit {
+  id          String      @id @default(cuid())
+  incidentId  String      @unique
+  incident    Incident    @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  scheduledAt DateTime
+  status      VisitStatus @default(PENDING)
+
+  videoSession VideoSession?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model VideoSession {
+  id              String             @id @default(cuid())
+  visitId         String             @unique
+  visit           Visit              @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  // ID de sesión devuelto por Vonage Video; null hasta que se cree (A1).
+  vonageSessionId String?
+  status          VideoSessionStatus @default(PENDING)
+  startedAt       DateTime?
+  endedAt         DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Notification {
+  id          String              @id @default(cuid())
+  incidentId  String
+  incident    Incident            @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  recipientId String
+  recipient   User                @relation(fields: [recipientId], references: [id])
+  channel     NotificationChannel @default(SMS)
+  status      NotificationStatus  @default(QUEUED)
+  // Plantilla usada ("post_visit") para poder cambiarla sin migrar datos.
+  template    String
+  providerMessageId String?
+  error       String?
+  sentAt      DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([incidentId])
+  @@index([status])
+}
