@@ -1,0 +1,12 @@
+packages:
+  - backend
+  - frontend
+
+# pnpm >= 10 bloquea los scripts de instalación por defecto.
+# Estos paquetes sí necesitan ejecutar el suyo (Prisma descarga engines,
+# esbuild compila su binario nativo).
+allowBuilds:
+  '@prisma/client': true
+  '@prisma/engines': true
+  esbuild: true
+  prisma: true

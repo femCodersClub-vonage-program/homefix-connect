@@ -1,0 +1,25 @@
+# Solo Postgres. La app (backend/frontend) se ejecuta en local con `pnpm dev`.
+# Decisión registrada en docs/ARCHITECTURE.md (v0) y docs/TASKS.md (T2).
+name: homefix-connect
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: homefix-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: homefix
+      POSTGRES_PASSWORD: homefix
+      POSTGRES_DB: homefix
+    ports:
+      - "5432:5432"
+    volumes:
+      - homefix_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U homefix -d homefix"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  homefix_pgdata:
