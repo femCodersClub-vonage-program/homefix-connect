@@ -55,6 +55,14 @@ Antes de escribir código, quien toma el issue completa en el propio issue:
 ## Criterio de aceptación (fijo, conductual)
 - [ ] <resultado observable>
 
+## Qué hace / cómo lo hace (a completar antes de empezar)
+- Qué: <resultado observable en una frase>
+- Cómo: <enfoque y piezas tocadas>
+
+## Datos mínimos
+- Campos: <solo los que el criterio de aceptación necesita>
+- Estados / enums: <del flujo del MVP, sin añadidos>
+
 ## A refinar por quien toma la tarea (antes de empezar)
 - [ ] Forma del payload / campos necesarios
 - [ ] Estados / enums / nombres
@@ -67,6 +75,8 @@ Antes de escribir código, quien toma el issue completa en el propio issue:
 ```
 
 > Si al refinar la tarea crece > 1 día → se **parte en dos issues** antes de empezar.
+>
+> Regla completa de especificación incompleta y datos mínimos: [`AGENTS.md`](../AGENTS.md) §5.1.
 
 ---
 

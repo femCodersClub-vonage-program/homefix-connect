@@ -27,17 +27,34 @@ grabación de vídeo, RCS/WhatsApp/Voice.
 
 ## 2. Reglas duras (no negociables)
 
-1. **1 tarea = 1 rama = 1 PR.** Si la tarea crece de 1 día, se parte en dos issues
-   **antes** de seguir.
-2. **Todo cambio lleva test.** Unitario como mínimo; contrato si toca la API.
-3. **`pnpm check` y `pnpm test` en verde antes de abrir el PR.** No se delega en
+1. **1 issue = 1 rama = 1 PR.** Nunca dos issues en el mismo PR. Si la tarea
+   crece de 1 día, se parte en dos issues **antes** de seguir.
+2. **Todo cambio lleva tests.** Unitario como mínimo; de contrato si toca la API;
+   de integración si toca base de datos o webhooks.
+3. **Probado en local antes de abrir el PR**, con los comandos y el resultado
+   pegados en la descripción. «En mi máquina funciona» no es evidencia.
+4. **Cada issue y cada PR dicen qué hace y cómo lo hace.** El *qué* es el
+   resultado observable; el *cómo* es el enfoque, las decisiones y las piezas
+   tocadas.
+5. **Si la especificación está incompleta, se completa antes de codear**
+   partiendo del caso de uso y de los **datos mínimos** necesarios (ver §5.1).
+   No se inventan campos, estados ni requisitos.
+6. **`pnpm check` y `pnpm test` en verde antes de abrir el PR.** No se delega en
    el CI.
-4. **Nadie mergea su propio PR sin 1 approval** de otra persona del equipo.
-5. **`backend/openapi.yaml` es la frontera.** Si cambia, se avisa en el sync y se
+7. **Ningún PR se mergea a `main` sin 1 approval** de otra persona del equipo.
+   Sin approval no hay merge, aunque parezca urgente.
+8. **`backend/openapi.yaml` es la frontera.** Si cambia, se avisa en el sync y se
    actualiza el cliente del frontend.
-6. **`schema.prisma` y `openapi.yaml` no se tocan sin PR aprobado.**
-7. **Nunca se commitea un secreto.** Ni `.env`, ni `private.key`, ni tokens.
-8. **No hay `npm` ni `yarn`.** Solo `pnpm`.
+9. **`schema.prisma` y `openapi.yaml` no se tocan sin PR aprobado.**
+10. **Nunca se commitea un secreto.** Ni `.env`, ni `private.key`, ni tokens.
+11. **No hay `npm` ni `yarn`.** Solo `pnpm`.
+12. **Cada tarea entrega valor observable del MVP.** Si no acerca un caso de uso
+    de `docs/MVP_DEFINITION.md`, no es una tarea: se descarta o se pospone.
+13. **El stack está fijado** (`docs/SDD_PLAN.md` §9). No se cambia ni se añade
+    tecnología sin un ADR en `docs/ARCHITECTURE.md` y un PR aprobado.
+14. **El scaffold es la referencia.** El código nuevo sigue la estructura,
+    convenciones y comandos existentes. Si hay que desviarse, se actualizan
+    `AGENTS.md` y/o `ARCHITECTURE.md` **en el mismo PR**.
 
 ---
 
@@ -105,6 +122,25 @@ Todo el detalle (qué deberías ver, cómo apagar, errores comunes) está en
 El refinamiento **no es opcional**: los issues fijan el caso de uso y el criterio
 de aceptación, pero **no** fijan modelo, payload ni nombres.
 
+### 5.1 Si la especificación está incompleta
+
+Los issues del tablero traen el caso de uso y el criterio de aceptación, no el
+diseño. Antes de escribir código, se completa **en el propio issue**:
+
+| Pregunta | De dónde sale la respuesta |
+|---|---|
+| ¿Qué datos necesito? | Solo los campos que el criterio de aceptación necesita para cumplirse |
+| ¿Qué estados o enums? | Los del flujo en `docs/MVP_DEFINITION.md`; ni uno más |
+| ¿Qué endpoint y payload? | La forma mínima que el frontend necesita hoy |
+| ¿Qué pasa en los errores? | `400/403/404/409/500` según §11; no se inventan códigos |
+| ¿Y si hay dos lecturas posibles? | Se pregunta en el issue y se elige la más simple; se anota |
+
+**Principio de datos mínimos:** si un campo no lo usa el flujo del MVP, **no se
+añade «por si acaso»**. Se añade cuando una tarea lo necesite, en su PR.
+
+**Regla de cierre:** si al definirla no cabe en 1 día, se parte en dos issues
+**antes** de empezar, no a mitad.
+
 ---
 
 ## 6. Ramas
@@ -163,8 +199,15 @@ Commits pequeños y con un propósito. Nada de `wip`, `fixes` ni `varios cambios
 
 ## 8. Pull Requests
 
-- **1 tarea = 1 rama = 1 PR**, con el ID en el título: `feat(A3): POST /video-tokens`.
-- Descripción mínima: **qué**, **por qué**, **cómo probarlo**, **decisiones tomadas**.
+- **1 issue = 1 rama = 1 PR**, con el ID en el título: `feat(A3): POST /video-tokens`.
+- El PR **cierra un único issue** (`Closes #N`). Si hacen falta dos, son dos PRs.
+- La descripción responde a cinco cosas (plantilla en
+  `.github/pull_request_template.md`):
+  1. **Qué hace** — resultado observable.
+  2. **Cómo lo hace** — enfoque, piezas tocadas y decisiones.
+  3. **Cómo se probó en local** — comandos ejecutados y resultado.
+  4. **Decisiones de especificación** — qué se completó del issue y por qué.
+  5. **Riesgos o pendientes** — lo que queda fuera de este PR.
 - Requisitos para mergear: **CI verde + 1 approval**.
 - Merge: **squash**. La rama se borra después.
 - Si el PR cambia `openapi.yaml` o `schema.prisma`, decirlo explícitamente en la
@@ -237,8 +280,18 @@ Reglas:
 - Añadir dependencias nuevas.
 - Cambiar el alcance del MVP o inventar requisitos que no están en
   `docs/MVP_DEFINITION.md`.
+- Cambiar el stack, la estructura del scaffold o los comandos existentes.
 - Tocar `.github/workflows/`, `docker-compose.yml` o la configuración de
   seguridad sin justificarlo.
+
+**Nunca sin autorización explícita de una persona**
+
+- `git push`, abrir un PR, mergear a `main` o borrar ramas remotas.
+- Mover issues o cambiar el GitHub Project.
+- Reescribir historia (`rebase`, `force-push`) sobre ramas compartidas.
+
+Si el cambio está listo, se **propone** y se espera confirmación: describir qué
+se va a subir, en qué rama y por qué.
 
 **Siempre**
 
@@ -266,6 +319,16 @@ Y comprobar a mano lo que aplica a tu tarea:
 curl http://localhost:3000/api/health
 docker compose ps                  # homefix-db en healthy
 tail -f backend/logs/app.jsonl     # aparece tu petición en JSONL
+```
+
+**Evidencia de prueba local** (se pega en el PR): los comandos ejecutados y su
+resultado. Ejemplo:
+
+```text
+$ pnpm test                          → 4 passed (backend) · 3 passed (frontend)
+$ pnpm check                         → sin errores
+$ curl :3000/api/health              → {"status":"ok",...}
+$ curl :3000/api/incidents/inc_demo  → inc_demo · VISIT_ASSIGNED
 ```
 
 **Criterio de "Done"** (resumen de [`docs/TASKS.md`](./docs/TASKS.md) §12):
