@@ -145,6 +145,8 @@ El desglose completo y vivo está en [`TASKS.md`](./TASKS.md). En definición qu
 | **T2** | `backend/prisma/schema.prisma` + `docker-compose.yml` | Dev 3 | Modelo de datos, DB local, seed | `docker-compose up -d` + `db:push` + `db:seed` OK |
 
 > **Nota**: `D-03`/`D-04`/`D-05` del plan anterior se absorbieron en `T2`/`T1`/`TASKS.md`. `D-06`/`D-07` (docs por workspace) quedan **fuera del plazo**.
+>
+> **Nota de ejecución**: el bootstrap de la semana 1 (T0, T2, X2, D-01, D-02) lo hizo la mentora para desbloquear al equipo antes de que arrancaran los carriles. A partir de aquí, **el equipo revisa, mantiene y amplía** estos documentos en sus PRs: la mentora no vuelve a escribirlos sola.
 
 **Rol de la mentora**: Revisa PRs, pregunta, desafía, aprueba — **NO escribe los documentos**.
 
@@ -284,7 +286,7 @@ homefix-connect/
 
 **Ventajas**: onboarding rápido, decisiones locales trazadas, IA contextual (Copilot lee el AGENTS.md del workspace donde estás).
 
-> **D-06 y D-07** (docs por workspace) quedan **fuera del plazo de 4 semanas**. Se abordan solo si sobra tiempo en la semana 4.
+> **D-06 y D-07** (docs por workspace) quedan **fuera del plazo de 4 semanas**. Se abordan solo si sobra tiempo en la semana 4. Los `AGENTS.md` finos de `backend/` y `frontend/` ya están creados (deltas de capa que enlazan al raíz).
 
 ---
 

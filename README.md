@@ -28,9 +28,10 @@ La coordinación de una reparación puede requerir varios intercambios entre la 
 
 | Componente | Tecnología |
 |------------|------------|
-| **Backend** | Node.js + TypeScript + Express + Prisma ORM |
+| **Monorepo** | pnpm workspaces (`backend/` + `frontend/`) |
+| **Backend** | Node 24 + TypeScript + Express + Prisma ORM |
 | **Frontend** | React + TypeScript + Vite + TanStack Query |
-| **Base de datos** | PostgreSQL (docker-compose local) |
+| **Base de datos** | PostgreSQL 16 (docker-compose local) |
 | **Mensajería** | Vonage Messages API (SMS + webhooks de estado) |
 | **Videollamada** | Vonage Video API (Server SDK + Web SDK) |
 | **Testing** | Vitest (unit), Pact (contract), Supertest (integration), Playwright (e2e) |
@@ -40,176 +41,193 @@ La coordinación de una reparación puede requerir varios intercambios entre la 
 
 ## 📋 Requisitos previos
 
-- Node.js 18+
-- pnpm (recomendado)
-- Docker (para levantar PostgreSQL con `docker-compose`)
-- Cuenta de Vonage (para Messages API y Video API)
-- ngrok (para desarrollo local con webhooks)
+| Requisito | Versión | Cómo comprobarlo |
+|-----------|---------|------------------|
+| Node.js | **24** (`.nvmrc`) | `node -v` |
+| pnpm | **12** (vía `corepack`) | `corepack enable pnpm && pnpm -v` |
+| Docker + Compose | cualquiera reciente | `docker compose version` |
+| Cuenta Vonage | Video + Messages | solo para la integración real (semana 3) |
+| ngrok | cualquiera reciente | solo para webhooks locales |
+
+> ⚠️ Este proyecto usa **pnpm**, no `npm` ni `yarn`. `npm install` rompe el
+> monorepo.
+> ℹ️ **Docker solo se usa para PostgreSQL.** Backend y frontend corren nativos.
 
 ## ⚙️ Configuración del entorno
 
 ```bash
-# Clonar el repositorio
-git clone <repo-url>
+# 1. Clonar
+git clone git@github.com:femCodersClub-vonage-program/homefix-connect.git
 cd homefix-connect
 
-# Instalar dependencias (monorepo con pnpm workspaces)
+# 2. Instalar todo el monorepo (backend + frontend + raíz)
 pnpm install
 
-# Levantar PostgreSQL
-docker-compose up -d postgres
+# 3. Configuración local (un único .env en la raíz)
+cp -n .env.example .env
 
-# Copiar archivos de entorno de ejemplo
-cp backend/.env.example backend/.env
-cp frontend/.env.example frontend/.env
-
-# Configurar variables de entorno (ver sección abajo)
+# 4. Base de datos
+pnpm db:up       # arranca PostgreSQL en Docker
+pnpm db:push     # crea/actualiza las tablas
+pnpm db:seed     # datos de demo (incidencia, visita, sesión)
 ```
+
+`db:push` y `db:seed` solo hacen falta la primera vez, o cuando cambie
+`backend/prisma/schema.prisma`.
 
 ### Variables de entorno
 
-**`backend/.env`**
+Un solo archivo `.env` en la raíz (plantilla: [`.env.example`](.env.example)).
+Las claves de Vonage pueden quedarse vacías hasta la integración real: solo
+fallan los endpoints que las usan.
 
 ```env
-# Base de datos
-DATABASE_URL="postgresql://user:password@localhost:5432/homefix?schema=public"
-
-# Vonage Messages API
-VONAGE_MESSAGES_API_KEY="your_messages_api_key"
-VONAGE_MESSAGES_API_SECRET="your_messages_api_secret"
-VONAGE_SMS_FROM="Homefix"
-VONAGE_WEBHOOK_SECRET="your_webhook_secret"
-
-# Vonage Video API
-VONAGE_VIDEO_API_KEY="your_video_api_key"
-VONAGE_VIDEO_API_SECRET="your_video_api_secret"
-VONAGE_VIDEO_APPLICATION_ID="your_application_id"
-VONAGE_VIDEO_PRIVATE_KEY_PATH="./private.key"
-
-# App
-PORT=3000
 NODE_ENV=development
-FRONTEND_URL="http://localhost:5173"
-WEBHOOK_BASE_URL="https://xxxx.ngrok-free.app"
+PORT=3000
+LOG_LEVEL=info
+
+DATABASE_URL=postgresql://homefix:homefix@localhost:5432/homefix?schema=public
+
+# Vonage Video
+VONAGE_API_KEY=
+VONAGE_API_SECRET=
+VONAGE_APPLICATION_ID=
+VONAGE_PRIVATE_KEY_PATH=./private.key
+
+# Vonage Messages / SMS
+VONAGE_MESSAGES_FROM=
+MANAGER_PHONE=
+TENANT_PHONE=
+TECHNICIAN_PHONE=
+
+# Webhooks (ngrok en local)
+WEBHOOK_BASE_URL=http://localhost:3000
+VONAGE_SIGNATURE_SECRET=
+
+# Frontend (solo se exponen las VITE_*)
+VITE_API_BASE_URL=
 ```
 
-**`frontend/.env`**
-
-```env
-VITE_API_BASE_URL="http://localhost:3000/api/v1"
-VITE_VONAGE_VIDEO_API_KEY="your_public_video_api_key"
-```
-
-> ⚠️ **Seguridad**: Nunca subas los archivos `.env` ni claves privadas a Git. Usa los `.env.example` como plantilla.
+> ⚠️ **Seguridad**: nunca subas `.env`, `private.key` ni credenciales a Git. Usa
+> `.env.example` como plantilla.
 
 ## 🏃‍♂️ Ejecución en desarrollo
 
 ```bash
-# 1. PostgreSQL
-docker-compose up -d postgres
+pnpm dev              # backend :3000 + frontend :5173 en paralelo
 
-# 2. Backend + Frontend (concurrently)
-pnpm dev            # backend:3000 + frontend:5173
-
-# 3. Webhooks local (terminal aparte)
-ngrok http 3000     # copiar URL https a WEBHOOK_BASE_URL en backend/.env
+# o por separado
+pnpm dev:backend
+pnpm dev:frontend
 ```
 
-Comandos individuales, si se necesitan:
+Abre **http://localhost:5173**. Deberías ver «Homefix Connect» y la tarjeta
+**Backend: ok**.
+
+Webhooks locales (a partir de la semana 3, con Vonage real):
 
 ```bash
-pnpm --filter backend dev
-pnpm --filter frontend dev
+ngrok http 3000
+# copia la URL https en WEBHOOK_BASE_URL del .env y en el dashboard de Vonage
+```
+
+Comprobar que la base de datos responde:
+
+```bash
+curl http://localhost:3000/api/incidents/inc_demo
 ```
 
 ## 🧪 Testing
 
 ```bash
-# Todos los tests (unit + contract)
-pnpm test
+pnpm check                        # lint + typecheck (ambos workspaces)
+pnpm test                         # Vitest (backend + frontend)
+pnpm build                        # compila ambos workspaces
 
-# Solo tests de contrato (Pact)
-pnpm test:contract
-
-# Solo tests end-to-end (Playwright)
-pnpm test:e2e
-
-# Tests con cobertura
-pnpm test:coverage
-
-# Por workspace
+# por workspace
 pnpm --filter backend test
 pnpm --filter frontend test
 ```
+
+Los tests de contrato (Pact) y E2E (Playwright) se añaden con las tareas **A5**,
+**B5**, **C6** e **I1**; sus scripts (`test:contract`, `test:e2e`) todavía no
+existen.
 
 ## 📁 Estructura del proyecto
 
 ```
 homefix-connect/
 ├── docs/                          # Documentación cross-cutting
-│   ├── MVP_DEFINITION.md
-│   ├── SDD_PLAN.md
+│   ├── AGENTS.md                  # Guía de trabajo (ramas, commits, IA, tests)
+│   ├── ARCHITECTURE.md            # v0: ADRs + diagramas
+│   ├── LOCAL_SETUP.md             # Cómo levantar y apagar el proyecto
+│   ├── MVP_DEFINITION.md          # Alcance y escenarios Gherkin
+│   ├── SDD_PLAN.md                # Metodología SDD
+│   ├── TASKS.md                   # Plan de tareas y orden de toma
 │   └── Homefix_Connect_MVP_Casos_de_Uso.md
-├── backend/                       # API REST (Express + TypeScript + Prisma)
-│   ├── docs/                      # Documentación backend-specific
-│   │   ├── AGENTS.md
-│   │   ├── SERVICES.md
-│   │   ├── WEBHOOKS.md
-│   │   ├── DATABASE.md
-│   │   └── TESTING.md
+├── backend/
+│   ├── AGENTS.md                  # Reglas específicas del backend
+│   ├── prisma/schema.prisma       # Modelo de datos (v0)
 │   ├── src/
-│   │   ├── routes/                # Endpoints de la API
-│   │   ├── services/              # Lógica de negocio + integraciones Vonage
-│   │   ├── webhooks/              # Webhooks Vonage (Video + Messages)
-│   │   ├── prisma/                # Esquema y migraciones de BD
-│   │   └── utils/                 # Helpers y validaciones
-│   ├── openapi.yaml               # Fuente de verdad de la API
-│   └── tests/
-├── frontend/                      # App React (Vite + TypeScript)
-│   ├── docs/                      # Documentación frontend-specific
-│   │   ├── AGENTS.md
-│   │   ├── COMPONENTS.md
-│   │   ├── STATE.md
-│   │   ├── VIDEO_INTEGRATION.md
-│   │   └── TESTING.md
-│   ├── src/
-│   │   ├── api/                   # Cliente generado desde OpenAPI
-│   │   ├── components/            # Componentes UI reutilizables
-│   │   ├── pages/                 # Páginas principales
-│   │   ├── hooks/                 # Custom hooks
-│   │   └── types/                 # Tipos TypeScript compartidos
-│   └── tests/
-├── .github/workflows/             # CI/CD pipelines
-├── .gitignore
-├── docker-compose.yml             # PostgreSQL local
-├── package.json                   # Workspace root (pnpm)
-├── pnpm-workspace.yaml
-└── README.md
+│   │   ├── index.ts               # Arranque (:3000)
+│   │   ├── app.ts                 # Express: middlewares y rutas
+│   │   ├── config/env.ts          # Validación de entorno (zod)
+│   │   ├── lib/logger.ts          # pino → logs/app.jsonl
+│   │   ├── db/                    # PrismaClient + seed
+│   │   └── routes/                # Endpoints
+│   └── logs/app.jsonl             # Generado al ejecutar (ignorado por git)
+├── frontend/
+│   ├── AGENTS.md                  # Reglas específicas del frontend
+│   ├── index.html
+│   ├── vite.config.ts             # Proxy /api → :3000 · envDir raíz
+│   └── src/
+│       ├── main.tsx               # QueryClientProvider
+│       ├── App.tsx                # Pantalla de humo
+│       ├── api/http.ts            # Cliente provisional (C1 lo sustituye)
+│       └── test/setup.ts
+├── .github/workflows/ci.yml       # Lint + typecheck + test + build
+├── docker-compose.yml             # Solo PostgreSQL
+├── package.json                   # Scripts raíz
+├── pnpm-workspace.yaml            # Workspaces + allowBuilds
+├── tsconfig.base.json             # Configuración TS compartida
+└── .env.example
 ```
+
+> `backend/openapi.yaml` (T1) y las carpetas `services/`, `webhooks/`,
+> `components/` y `pages/` **se crean con sus tareas**. No las añadas vacías.
 
 ## 📚 Documentación
 
-- [Definición del MVP](./docs/MVP_DEFINITION.md) — Alcance reducido, escenarios Gherkin, APIs Vonage y criterios de aceptación
-- [Plan SDD](./docs/SDD_PLAN.md) — Metodología Specification-Driven Development, tareas de definición (D-01…D-07), testing, rotación del equipo
-- [MVP y Casos de Uso](./docs/Homefix_Connect_MVP_Casos_de_Uso.md) — Documento de definición inicial completo (referencia)
+- [Guía de puesta en marcha](./docs/LOCAL_SETUP.md) — Instalar, levantar, comprobar y apagar, paso a paso
+- [AGENTS.md](./docs/AGENTS.md) — Ramas, commits, testing, entorno y constraints para IA
+- [Arquitectura v0](./docs/ARCHITECTURE.md) — ADRs, diagramas, seguridad y observabilidad
+- [Plan de tareas](./docs/TASKS.md) — Oleadas, dependencias y orden de toma
+- [Definición del MVP](./docs/MVP_DEFINITION.md) — Alcance, escenarios Gherkin, APIs Vonage y criterios de aceptación
+- [Plan SDD](./docs/SDD_PLAN.md) — Metodología Specification-Driven Development
+- [MVP y Casos de Uso](./docs/Homefix_Connect_MVP_Casos_de_Uso.md) — Documento de definición inicial (referencia)
 
 ## 🔐 Seguridad
 
 - Las credenciales y claves privadas de Vonage se guardan en variables de entorno y **nunca** se suben a Git
 - Los tokens de vídeo se generan en el backend y solo se entregan a participantes autorizados
-- Los webhooks de Vonage se validan por firma HMAC
+- Los webhooks de Vonage se validan por firma antes de procesarse
+- La autenticación es **simulada** con `X-User-Id` / `X-User-Role` (fuera de alcance el login real)
 - Los datos personales y teléfonos se limitan a lo necesario para la demo
 - No se grabarán videollamadas en el alcance inicial
 
 ## 🤝 Contribuir
 
-1. Crea una rama desde `main` (`git checkout -b feature/<task-id>-<descripcion>`)
-2. Commit siguiendo [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`, `test:`…)
-3. Push a la rama (`git push origin feature/<task-id>-<descripcion>`)
-4. Abre un Pull Request (requiere CI verde + 1 approval)
+1. Toma un issue de [`docs/TASKS.md`](./docs/TASKS.md) y **refínalo antes de codear**
+2. Crea la rama desde `main`: `<prefijo>/<ID>-<slug>` (ej. `feat/A3-video-tokens`)
+3. Commit siguiendo [Conventional Commits](https://www.conventionalcommits.org/)
+   (`feat:`, `fix:`, `spec:`, `test:`, `docs:`, `chore:`…)
+4. `pnpm check && pnpm test` en verde
+5. Abre un Pull Request: **CI verde + 1 approval** → **squash merge**
+
+Detalle completo en [`docs/AGENTS.md`](./docs/AGENTS.md).
 
 ---
 
-**Mentora**: Mariellys Soto  
+**Mentora**: Mariellys Soto
 **Plazo**: proyecto de 6 semanas totales · **quedan 4 semanas**
 **Equipo**: 1 mentora + 3 desarrolladoras
