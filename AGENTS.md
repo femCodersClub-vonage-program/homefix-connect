@@ -213,19 +213,64 @@ Commits pequeños y con un propósito. Nada de `wip`, `fixes` ni `varios cambios
 - Si el PR cambia `openapi.yaml` o `schema.prisma`, decirlo explícitamente en la
   descripción y pedir revisión de otra persona.
 
+### 8.1 Uso de plantillas (obligatorio)
+
+**Pull Requests** — usa `.github/pull_request_template.md`:
+
+1. Al abrir PR, GitHub rellena la descripción automáticamente.
+2. **Rellena todas las secciones**; si una no aplica, escribe `N/A`.
+3. La sección **Cómo se probó en local** debe tener comandos reales y su salida.
+4. El **Checklist** se marca antes de pedir review; sin checks no hay merge.
+
+**Issues (tareas)** — usa `.github/ISSUE_TEMPLATE/tarea.md`:
+
+1. Al crear issue, elige "Tarea" en el selector de plantillas.
+2. **Completa en el issue** (como comentario inicial o editando) las secciones:
+   - Qué hace / Cómo lo hace
+   - Datos mínimos, Estados/enums, Payload, Errores
+   - Dependencias Hard / Soft
+3. **Antes de codear** el issue debe tener esas secciones completas (regla §5.1).
+4. La rama sugerida al final (`<prefijo>/<ID>-<slug>`) se copia al crear la rama.
+
+> **No se empieza a codear** hasta que el issue tenga la plantilla completada.
+> El refinamiento **es el contrato** entre quien toma la tarea y el resto del equipo.
+
 ---
 
-## 9. Estándares de código
+## 9. Estándares de código, Patrones y Skills Recomendadas
 
-- **TypeScript estricto** (`strict`, `noUncheckedIndexedAccess`). Prohibido `any`
-  implícito; si necesitas escapar, usa `unknown` + validación.
-- **ESM en el backend**: los imports internos llevan extensión `.js`
-  (`import { prisma } from './db/client.js'`).
-- **Validación de entrada con `zod`** en todo endpoint que reciba datos.
+### 9.1 Patrones y Arquitectura General
+- **TypeScript estricto** (`strict`, `noUncheckedIndexedAccess`). Prohibido `any` implícito; si necesitas escapar, usa `unknown` + validación.
+- **Validación de entrada con `zod`** en todo endpoint o formulario que reciba datos.
+- **KISS y YAGNI**: No forzar patrones hiper-complejos ni sobrediseñar si una abstracción simple o hook/servicio resuelve la necesidad del MVP.
 - **Sin `console.log`** en backend: usa el logger (`src/lib/logger.ts`).
 - **Sin secretos ni teléfonos reales** en código, tests, seeds ni fixtures.
 - **Sin refactors oportunistas** dentro de un PR de funcionalidad.
-- Comentarios solo para el **por qué**, no para el qué.
+
+### 9.2 Frontend (React & TypeScript)
+- **Arquitectura Hexagonal / Decoupled**: Separación clara entre el dominio de UI y los adaptadores (APIs, SDKs de vídeo/mensajería).
+- **Separación de Lógica y Datos**: React Query (TanStack Query) para estado del servidor y Context API o Zustand para el estado global de UI (evitando prop-drilling).
+- **Principios SOLID (Inversión de Dependencias - DIP)**: Inyección o abstracción de servicios de API/SDK para desacolplar componentes de la lógica de negocio.
+- **Formularios y Validación**: Zod con React Hook Form para esquemas y validación estricta de entrada.
+- **Skills Recomendadas para Frontend**:
+  - `frontend-dev-guidelines`: Estandarización de rutas, data-fetching y estructura de archivos.
+  - `vercel-react-best-practices`: Optimización de rendimiento (lazy loading, separación client/server componentes).
+  - `react-best-practices`: Patrones recomendados de hooks, composición y estado predecible.
+
+### 9.3 Backend (Node.js & TypeScript)
+- **Clean Architecture / Hexagonal**: Definición clara de dominio, aplicación y adaptadores (controllers, services, repositories).
+- **DDD (Domain-Driven Design)**: Value Objects inmutables y Aggregates cuando la complejidad de dominio lo requiera.
+- **Validación Estricta**: Valida todas las entradas (bodies, query params) antes de ejecutar la lógica de negocio usando Zod.
+- **Controladores Ligeros**: Traslada la lógica de negocio a servicios aislados con límites de repositorio probables y testeables.
+- **Skills Recomendadas para Backend**:
+  - `nodejs-backend-patterns`: Buenas prácticas en Express/Node.js, autenticación, caching y modularidad.
+  - `architecture-patterns`: Implementaciones y guía sobre Clean Architecture, Hexagonal y DDD.
+  - `error-handling-patterns`: Manejo de errores por capas, captura centralizada y logs estructurados.
+
+### 9.4 Integración Fullstack
+- **Monorepo**: Compartir tipos y validaciones (esquemas Zod) entre frontend y backend.
+- **Proxy API**: Backend / Vite proxy para solicitudes durante desarrollo evitando problemas de CORS.
+- **Testing**: Vitest para pruebas unitarias y rápidas en ambos workspaces.
 
 ---
 
