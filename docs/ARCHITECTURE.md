@@ -79,7 +79,7 @@ sequenceDiagram
   T->>V: Cuelga
   V-->>B: webhook session.end (firma)
   B->>DB: video ENDED · incidencia VIDEO_COMPLETED
-  B->>M: Enviar SMS a gestora y a inquilina
+  B->>M: Enviar SMS a gestora e inquilina
   M-->>B: messageId
   B->>DB: 2 Notification en QUEUED
   M-->>B: webhook message.status (submitted/delivered)
@@ -151,7 +151,17 @@ sequenceDiagram
 ### ADR-007 — Autenticación simulada por cabeceras
 
 - **Contexto:** el login real está fuera de alcance y no aporta a la demo.
-- **Decisión:** `X-User-Id` y `X-User-Role` (`TENANT` | `TECHNICIAN` | `MANAGER`).
+- **Decisión:** `X-User-Id` y `X-User-Role` (`TENANT` | `TECHNICIAN` | `MANAGER`),
+  con los IDs fijos del seed:
+
+  | Cabecera | Inquilina | Técnica | Gestora |
+  |---|---|---|---|
+  | `X-User-Id` | `usr_tenant_demo` | `usr_technician_demo` | `usr_manager_demo` |
+  | `X-User-Role` | `TENANT` | `TECHNICIAN` | `MANAGER` |
+
+  La demo abre **dos pestañas** del navegador: una como inquilina y otra como
+  técnica. El rol se elige con un selector visible en la pantalla de la
+  incidencia (no hay login ni almacenamiento de sesión).
 - **Consecuencias:** se puede demostrar autorización por rol sin construir
   identidad. **No es seguridad real**: el backend confía en la cabecera.
 
@@ -177,9 +187,13 @@ sequenceDiagram
 - **Contexto:** el modelo no está cerrado y el equipo debe poder levantarlo hoy.
 - **Decisión:** 5 entidades mínimas (`User`, `Incident`, `Visit`, `VideoSession`,
   `Notification`) con IDs fijos en el seed (`inc_demo`, `visit_demo`, `vs_demo`).
+  Los **teléfonos de destino de los SMS salen de `User.phone` en la base de
+  datos**, no de variables de entorno: una sola fuente de verdad. `.env` solo
+  guarda credenciales y configuración de Vonage.
 - **Consecuencias:** el frontend y los tests tienen datos estables. El schema se
   refina en el PR de cada tarea; los IDs fijos no se cambian sin actualizar seed,
-  tests y frontend.
+  tests y frontend. Cambiar un destinatario de la demo es editar el seed, no el
+  `.env`.
 
 ### ADR-011 — Node 24 y pnpm 12 fijados
 

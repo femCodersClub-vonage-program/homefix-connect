@@ -272,7 +272,7 @@ curl http://localhost:3000/api/incidents/inc_demo
 ```
 
 Devuelve un JSON largo con `"id":"inc_demo"`, `"status":"VISIT_ASSIGNED"`, los
-datos de la inquilina/técnica/gestora, la visita `CONFIRMED` y la sesión de
+datos de la inquilina, técnica y gestora, la visita `CONFIRMED` y la sesión de
 vídeo `PENDING`. **Si ves eso, la cadena Docker → Prisma → Express funciona.**
 
 ### 5.4 El frontend llega al backend a través del proxy

@@ -1,28 +1,28 @@
 # Homefix Connect
 
-Aplicación web para coordinar la **visita virtual de una avería** en una vivienda de alquiler. El MVP parte de una **incidencia ya reportada con visita asignada**: la inquilina y el técnico entran a una videollamada 1-a-1, y al finalizar se envían SMS automáticos al gestor/propietario y a la inquilina notificando que la visita se realizó.
+Aplicación web para coordinar la **visita virtual de una avería** en una vivienda de alquiler. El MVP parte de una **incidencia ya reportada con visita asignada**: la inquilina y la técnica entran a una videollamada 1-a-1, y al finalizar se envían SMS automáticos a la gestora y a la inquilina notificando que la visita se realizó.
 
 > **¿Primera vez en el repo?** Guía paso a paso para instalar, levantar, comprobar y apagar el proyecto: [`docs/LOCAL_SETUP.md`](docs/LOCAL_SETUP.md).
 
 ## 🎯 Problema que resuelve
 
-La coordinación de una reparación puede requerir varios intercambios entre la persona que reporta la avería y el técnico. La información puede quedar dispersa y las personas implicadas pueden no conocer el estado de la incidencia o la fecha de la visita.
+La coordinación de una reparación puede requerir varios intercambios entre la persona que reporta la avería y la técnica. La información puede quedar dispersa y las personas implicadas pueden no conocer el estado de la incidencia o la fecha de la visita.
 
 ## 👥 Perfiles de usuario
 
 | Rol | Descripción |
 |-----|-------------|
-| **Inquilina** | Reporta y consulta la incidencia, participa en la videollamada y recibe notificaciones |
-| **Técnico** | Participa en la visita virtual evaluando la avería |
-| **Propietaria / Gestora** | Consulta el estado y recibe avisos relevantes |
+| **Inquilina** (`TENANT`) | Reporta y consulta la incidencia, participa en la videollamada y recibe notificaciones |
+| **Técnica** (`TECHNICIAN`) | Participa en la visita virtual evaluando la avería |
+| **Gestora** (`MANAGER`) | Consulta el estado y recibe avisos relevantes |
 
 ## 🚀 Flujo principal del MVP
 
-> El MVP **no** cubre la creación de incidencias ni la propuesta de citas: arranca cuando la incidencia ya existe con una visita asignada.
+> El MVP **no** cubre la creación de incidencias ni la propuesta de visitas: arranca cuando la incidencia ya existe con una visita asignada.
 
-1. **Entrar a la videollamada** — La inquilina y el técnico acceden a una sala de vídeo 1-a-1 desde el navegador.
-2. **Videollamada** — Ambos se ven y oyen para evaluar la avería.
-3. **Fin de la visita → SMS** — Al colgar, se envían dos SMS automáticos (gestor/propietario e inquilina): *"Visita realizada. Cuando el informe esté listo te notificaremos."*
+1. **Entrar a la videollamada** — La inquilina y la técnica acceden a una sala de vídeo 1-a-1 desde el navegador.
+2. **Videollamada** — Ambas se ven y oyen para evaluar la avería.
+3. **Fin de la visita → SMS** — Al colgar, se envían dos SMS automáticos (gestora e inquilina): *"Visita realizada. Cuando el informe esté listo te notificaremos."*
 
 ## 🛠 Stack tecnológico
 
@@ -96,9 +96,8 @@ VONAGE_PRIVATE_KEY_PATH=./private.key
 
 # Vonage Messages / SMS
 VONAGE_MESSAGES_FROM=
-MANAGER_PHONE=
-TENANT_PHONE=
-TECHNICIAN_PHONE=
+# Los teléfonos de destino salen de User.phone en la BD (seed).
+# No se usan variables MANAGER_PHONE / TENANT_PHONE / TECHNICIAN_PHONE.
 
 # Webhooks (ngrok en local)
 WEBHOOK_BASE_URL=http://localhost:3000

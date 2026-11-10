@@ -20,7 +20,7 @@ Al colgar, se envían **2 SMS** (gestora + inquilina) con Vonage Messages.
 - Decisiones de arquitectura: [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md)
 
 **Fuera de alcance** (no lo implementes aunque parezca fácil): crear
-incidencias, proponer/confirmar citas, login real, dashboard de listados,
+incidencias, proponer/confirmar visitas, login real, dashboard de listados,
 grabación de vídeo, RCS/WhatsApp/Voice.
 
 ---

@@ -239,7 +239,7 @@ T0 + T1 + T2 + X1 + X3  (semana 1)
 I1 (integración real con ngrok) → DEMO
 ```
 
-**Resultado**: dos pestañas (inquilina + técnico) entran a la videollamada 1-a-1; al colgar, `session.end` dispara 2 SMS reales y el frontend muestra "Visita finalizada".
+**Resultado**: dos pestañas (inquilina + técnica) entran a la videollamada 1-a-1; al colgar, `session.end` dispara 2 SMS reales y el frontend muestra "Visita finalizada".
 
 ---
 
