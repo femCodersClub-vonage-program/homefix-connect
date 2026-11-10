@@ -7,7 +7,7 @@ Mentora: Mariellys Soto
 Documento de trabajo para acordar alcance, tecnologías e integraciones
 de Vonage
 
-Duración estimada del proyecto: 6 semanas
+Duración total del proyecto: 6 semanas (4 semanas restantes)
 
 # 1. Visión del producto
 

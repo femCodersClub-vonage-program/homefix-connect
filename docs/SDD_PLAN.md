@@ -3,6 +3,8 @@
 > **Specification-Driven Development**: Definimos contratos, modelos y arquitectura **antes** de codificar. Cada spec es fuente de verdad y genera tests + implementación.
 >
 > **Equipo**: 4 personas (1 mentora + 3 desarrolladoras) — todas tocan todo, rotación semanal.
+>
+> **Plazo**: proyecto de 6 semanas iniciado hace 2 → **quedan 4 semanas**. El desglose vivo de tareas está en [`TASKS.md`](./TASKS.md).
 
 ---
 
@@ -10,27 +12,27 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  FASE DE DEFINICIÓN (Semanas 1-2) — "Specs First"              │
+│  FASE DE DEFINICIÓN (Semana 1, días 1-2) — "Specs First"        │
 │  ┌───────────────────────────────────────────────────────────┐  │
-│  │ EL EQUIPO (3 desarrolladoras) DEFINEN ESTOS ARTEFACTOS:   │  │
+│  │ EL EQUIPO (3 desarrolladoras) DEFINE ESTOS ARTEFACTOS:    │  │
 │  │  Mentora guía, revisa y aprueba — NO los escribe ella.   │  │
 │  │  1. AGENTS.md          → Guía de trabajo, flujo, comandos,│  │
 │  │                           constraints IA, testing, Docker  │  │
-│  │  2. ARCHITECTURE.md    → Diagramas C4, decisiones, seguridad,│  │
-│  │                           observabilidad (logging a archivo)│  │
-│  │  3. DATA_MODEL.md      → Esquema Prisma, ER, seeds, índices │  │
-│  │  4. API_CONTRACTS.md   → OpenAPI 3.1 (endpoints, webhooks)  │  │
-│  │  5. TASKS.md           → Breakdown tareas implementación    │  │
+│  │  2. ARCHITECTURE.md v0 → Decisiones (ADR-lite) + 1 diagrama│  │
+│  │  3. openapi.yaml       → Contrato API (T1)                 │  │
+│  │  4. schema.prisma      → Modelo de datos (T2)              │  │
+│  │  5. TASKS.md           → Breakdown ya definido (este repo)  │  │
 │  └───────────────────────────────────────────────────────────┘  │
 │                          ↓                                      │
-│  FASE DE IMPLEMENTACIÓN (Semanas 3-6) — "Tests First"          │
+│  FASE DE IMPLEMENTACIÓN (Semanas 1-4) — "Tests First"          │
 │  ┌───────────────────────────────────────────────────────────┐  │
-│  │ Para cada tarea vertical (spec ya aprobada):              │  │
+│  │ Para cada tarea pequeña (spec ya refinada):               │  │
+│  │  • Refinar el issue (payload/estados) antes de codear     │  │
 │  │  • Spec → genera types (`pnpm gen:types`)                 │  │
 │  │  • Test de contrato/unitario (rojo) — OBLIGATORIO        │  │
 │  │  • Implementación backend + frontend (verde)              │  │
 │  │  • `pnpm check` (lint + typecheck)                        │  │
-│  │  • Preview deploy local (demo en local)                   │  │
+│  │  • Demo local del slice                                   │  │
 │  └───────────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -61,7 +63,7 @@
 | **Contrato** | Pact | OpenAPI endpoints + webhooks Vonage | Antes de implementar (rojo) |
 | **Unitario** | Vitest | Services, utils, hooks, components | Junto a implementación |
 | **Integración** | Supertest + Testcontainers | Rutas Express + Prisma + Vonage mocks | Antes de merge |
-| **E2E** | Playwright | Flujo completo: 2 browsers (tenant + tech) → join → hangup → SMS | Semana 5-6, obligatorio para demo |
+| **E2E** | Playwright | Flujo completo: 2 browsers (tenant + tech) → join → hangup → SMS | Semana 3-4, para la demo |
 
 **Cobertura mínima**: `lines > 80%`, `branches > 70%`, `functions > 80%` en CI.
 
@@ -131,32 +133,35 @@ pnpm test            # unit + contract (debe pasar)
 
 ---
 
-## 7. Tareas de Definición (Semanas 1-2) — Las Define el Equipo (3 Desarrolladoras)
+## 7. Tareas de Definición (Semana 1) — Las Define el Equipo (3 Desarrolladoras)
+
+El desglose completo y vivo está en [`TASKS.md`](./TASKS.md). En definición quedan **2 documentos** + **2 specs técnicas** (que ya son tareas de implementación en `TASKS.md`):
 
 | ID | Artefacto | Owner | Qué Define | Criterios de Aceptación |
 |----|-----------|-------|------------|-------------------------|
-| **D-01** | `docs/AGENTS.md` (raíz) | Dev 1 | Flujo global, commits, branching, testing, Docker, constraints IA, troubleshooting, Vonage refs, flujo diario real | Nueva persona onboardea en < 30 min; CI respeta constraints IA |
-| **D-02** | `docs/ARCHITECTURE.md` | Dev 2 | C4 diagrams, seguridad, observabilidad (solo logging a archivo), despliegue local, ADR log, decisión Docker | Diagramas renderizan en GitHub; logging a archivo definido |
-| **D-03** | `docs/DATA_MODEL.md` | Dev 3 | Prisma schema, ER, seeds, índices, migraciones, consultas comunes, `docker-compose.yml` Postgres | `pnpm db:push` + `pnpm db:seed` + `docker-compose up -d` funcionan |
-| **D-04** | `docs/API_CONTRACTS.md` + `backend/openapi.yaml` | Dev 1 | OpenAPI 3.1: endpoints, schemas, errores, webhooks Vonage, auth headers, Pact structure | `pnpm gen:types` genera types frontend sin errores; `pnpm test:contract` corre |
-| **D-05** | `docs/TASKS.md` | Dev 2 + Dev 3 | Breakdown S3-S6, vertical slices, rotación 3 devs, story points, GitHub Project columns, testing strategy por tarea | Issues creables en GitHub Project #2; cada tarea tiene test plan |
-| **D-06** | `backend/docs/` (5 archivos) | Dev 2 | AGENTS.md, SERVICES.md, WEBHOOKS.md, DATABASE.md, TESTING.md — **patrones backend** | Onboarding backend en < 20 min; patrones documentados |
-| **D-07** | `frontend/docs/` (5 archivos) | Dev 3 | AGENTS.md, COMPONENTS.md, STATE.md, VIDEO_INTEGRATION.md, TESTING.md — **patrones frontend** | Onboarding frontend en < 20 min; patrones documentados |
+| **D-01** | `docs/AGENTS.md` (raíz) | Dev 1 | Flujo global, commits, branching, testing, Docker, constraints IA, troubleshooting, Vonage refs | Nueva persona onboardea en < 30 min; CI respeta constraints IA |
+| **D-02** | `docs/ARCHITECTURE.md` v0 | Dev 2 | ADR-lite (decisiones), 1 diagrama de contenedores, seguridad, observabilidad (logging a archivo), Docker | Decisiones trazables; diagrama renderiza en GitHub |
+| **T1** | `backend/openapi.yaml` | Dev 2 | Contrato API (schemas + paths + `gen:types`) | `pnpm gen:types` sin errores |
+| **T2** | `backend/prisma/schema.prisma` + `docker-compose.yml` | Dev 3 | Modelo de datos, DB local, seed | `docker-compose up -d` + `db:push` + `db:seed` OK |
+
+> **Nota**: `D-03`/`D-04`/`D-05` del plan anterior se absorbieron en `T2`/`T1`/`TASKS.md`. `D-06`/`D-07` (docs por workspace) quedan **fuera del plazo**.
 
 **Rol de la mentora**: Revisa PRs, pregunta, desafía, aprueba — **NO escribe los documentos**.
 
-**Entregable Semana 2**: Los 7 artefactos aprobados en PR + `pnpm gen:types` verde + seed data cargado + `docker-compose up -d` funcional.
+**Entregable Semana 1**: `T1` + `T2` verdes (`gen:types`, `db:push`, `db:seed`) + `D-01`/`D-02` aprobados.
 
 ---
 
-## 8. Tareas de Implementación (Semanas 3-6) — Vertical Slices
+## 8. Tareas de Implementación (Semanas 1-4) — Por Oleadas
 
-| Semana | Slice Vertical | Tareas Clave (ejemplos) | Tests Requeridos |
-|--------|----------------|-------------------------|------------------|
-| **3** | **Video Tokens + Join** | `POST /video-tokens`, `VideoService.generateToken`, Vonage SDK init frontend, página `VideoCall`, hook `useVideoSession` | Contract: token endpoint. Unit: VideoService. E2E: join call (1 browser) |
-| **4** | **Video Webhooks + SMS** | `POST /webhooks/video-events` (HMAC), `session.end` → update BD + disparar SMS, `MessagingService.sendPostVisitSMS`, `POST /webhooks/message-status`, toast UI "Visita finalizada" | Contract: ambos webhooks. Unit: MessagingService. Integration: webhook → SMS → BD. E2E: 2 browsers join → hangup → SMS |
-| **5** | **Edge Cases + Integración** | Reconexión automática, fallback cron job, rate limiting, error boundaries, accesibilidad básica | Unit: reconexión, rate limit. E2E: red inestable, reconexión, fallback job |
-| **6** | **Hardening + Demo Local** | Seguridad (helmet, CORS, secret scan), logging a archivo verificado, docs finales, **demo grabada en local**, retrospectiva | E2E completo passing. Security scan. Logs en archivo correctos. |
+| Semana | Foco | Tareas Clave | Tests Requeridos |
+|--------|------|--------------|------------------|
+| **1** | **Enablers** | `T0` monorepo, `T1` contrato, `T2` modelo+DB, `X1` interfaces/stubs, `X2` CI, `X3` HMAC | `gen:types`, `db:push`, `db:seed`, CI verde |
+| **2** | **Backend + pantallas** | `A1-A5` video, `B1-B5` SMS, `C1-C6` frontend | Unit + contract por service/endpoint |
+| **3** | **Integración** | `I1` E2E local con ngrok (vídeo real + SMS real) | Contract webhooks + integration + E2E 2 browsers |
+| **4** | **Cierre** | `I2` edge cases (best effort), demo, `D-01`/`D-02` | E2E completo + demo local |
+
+> Detalle de cada tarea, tamaños y dependencias: [`TASKS.md`](./TASKS.md).
 
 ---
 
@@ -194,12 +199,10 @@ pnpm test            # unit + contract (debe pasar)
 
 | Semana | Dev 1 | Dev 2 | Dev 3 | Mentora |
 |--------|-------|-------|-------|---------|
-| 1 (Def) | D-01 (AGENTS raíz) | D-02 (ARCHITECTURE) | D-03 (DATA_MODEL + docker-compose) | Revisa PRs, aprueba |
-| 2 (Def) | D-04 (API_CONTRACTS) | D-05 (TASKS) + **D-06 (backend/docs/)** | D-05 (TASKS) + **D-07 (frontend/docs/)** | Revisa todo, aprueba PRs |
-| 3 | Backend-heavy (tokens) | Frontend-heavy (VideoCall) | Testing-heavy (contracts/unit) | Video SDK, unblocks |
-| 4 | Backend-heavy (webhooks/SMS) | Frontend-heavy (toast/estados) | Testing-heavy (integration/E2E) | Webhooks, SMS logic |
-| 5 | Edge cases backend | Edge cases frontend | E2E completo + a11y | Revisión integración |
-| 6 | Seguridad + logging | Demo prep + docs | Load test local + retro | Demo final, cierre |
+| 1 | T0 monorepo + A1/A2 | T1 contrato + D-01 | T2 modelo+DB + D-02 | Revisa PRs, aprueba |
+| 2 | A3/A4/A5 video | B1-B5 mensajería | C1-C6 frontend | Video SDK, unblocks |
+| 3 | Integración I1 (backend) | Integración I1 (SMS) | Integración I1 (frontend) | Revisión integración |
+| 4 | Edge cases I2 | Fixes + docs | Demo + tests finales | Demo final, cierre |
 
 > Todas tocan backend + frontend + testing. "Heavy" = lleva la iniciativa en ese slice.
 
@@ -208,12 +211,16 @@ pnpm test            # unit + contract (debe pasar)
 ## 12. GitHub Project #2 — Columns
 
 ```
-Backlog → Definición (D-01..D-05) → Ready (specs done) → In Progress → In Review → Done
+Backlog → Ready → In progress → In review → Done
 ```
 
-- **Definición**: Tareas D-01 a D-05 (semanas 1-2) — **las escriben las 3 devs**
-- **Ready**: Spec aprobada en PR, lista para implementar
-- **In Review**: PR abierto, CI verde, esperando approval
+- **Backlog**: issues creados, aún no refinados
+- **Ready**: refinado por quien lo toma + dependencias resueltas o mockeadas
+- **In progress**: rama abierta
+- **In review**: PR con CI verde
+- **Done**: merged + demo local verificada
+
+> Milestones: `Fase 0 · Base`, `Fase 1 · Implementación`, `Fase 2 · Integración`, `Documentación`.
 
 ---
 
@@ -277,7 +284,7 @@ homefix-connect/
 
 **Ventajas**: onboarding rápido, decisiones locales trazadas, IA contextual (Copilot lee el AGENTS.md del workspace donde estás).
 
-> **D-06 y D-07** se hacen en **paralelo** en Semana 2 (mientras D-02, D-04, D-05). Cada dev documenta su área de ownership.
+> **D-06 y D-07** (docs por workspace) quedan **fuera del plazo de 4 semanas**. Se abordan solo si sobra tiempo en la semana 4.
 
 ---
 
@@ -295,27 +302,25 @@ homefix-connect/
 
 ## 16. Próximos Pasos Inmediatos — Para Empezar YA
 
-1. **Crear issues D-01 a D-07 en GitHub Project #2** (asignar owners: Dev 1, 2, 3)
-2. **Inicializar monorepo** (`pnpm-workspace.yaml`, `package.json` root, workspaces backend/frontend)
-3. **Crear `docker-compose.yml` solo Postgres** (Dev 3 en D-03)
-4. **Semana 1**: Kickoff 30 min → Dev 1 empieza D-01 (`docs/AGENTS.md`), Dev 3 empieza D-03 (`docs/DATA_MODEL.md`) en paralelo
-5. **Semana 2**: Dev 2 hace D-02 (`docs/ARCHITECTURE.md`), Dev 1 hace D-04 (`docs/API_CONTRACTS.md`), Dev 2+3 hacen D-05 (`docs/TASKS.md`) + **Dev 2 hace D-06 (`backend/docs/`)**, **Dev 3 hace D-07 (`frontend/docs/`)** en paralelo
+1. **Issues ya creados en GitHub Project #2** (sin asignar), según [`TASKS.md`](./TASKS.md)
+2. **Arrancar en paralelo**: `T0` monorepo, `T1` contrato, `T2` modelo+DB, `X1` interfaces, `X3` HMAC
+3. **Arrancar docs en paralelo**: `D-01` (AGENTS) y `D-02` (ARCHITECTURE v0)
+4. **Semana 2**: carriles `A` (video), `B` (SMS), `C` (frontend)
+5. **Semana 3**: `I1` integración real con ngrok
+6. **Semana 4**: `I2` edge cases (best effort) + demo
 
 ---
 
 ## 17. Checklist: ¿Están Listas las Tareas de Definición para Empezar?
 
-| Tarea | Artefacto | Owner | ¿Lista para empezar? | Qué necesita la dev día 1 |
-|-------|-----------|-------|---------------------|---------------------------|
-| **D-01** | `docs/AGENTS.md` (raíz) | Dev 1 | ✅ Sí | Ver `MVP_DEFINITION.md`, este `SDD_PLAN.md`, repo clonado |
-| **D-02** | `docs/ARCHITECTURE.md` | Dev 2 | ✅ Sí | Ver `MVP_DEFINITION.md`, decidir C4 tool (Mermaid en MD), Docker decision |
-| **D-03** | `docs/DATA_MODEL.md` | Dev 3 | ✅ Sí | Ver `MVP_DEFINITION.md`, Prisma docs, crear `docker-compose.yml` Postgres |
-| **D-04** | `docs/API_CONTRACTS.md` + `backend/openapi.yaml` | Dev 1 | ✅ Sí | Ver `MVP_DEFINITION.md` (endpoints + webhooks), OpenAPI 3.1 spec, Pact docs |
-| **D-05** | `docs/TASKS.md` | Dev 2 + Dev 3 | ✅ Sí | Ver este `SDD_PLAN.md` (semanas 3-6), GitHub Project #2 columns |
-| **D-06** | `backend/docs/` (5 archivos) | Dev 2 | ✅ Semana 2 | Ver `docs/ARCHITECTURE.md` (cuando exista), Prisma/Vonage patterns |
-| **D-07** | `frontend/docs/` (5 archivos) | Dev 3 | ✅ Semana 2 | Ver `docs/API_CONTRACTS.md` (tipos), Vonage Video SDK docs |
+| Tarea | Artefacto | ¿Lista para empezar? | Qué necesita la dev día 1 |
+|-------|-----------|---------------------|---------------------------|
+| **D-01** | `docs/AGENTS.md` | ✅ Sí | Ver `MVP_DEFINITION.md`, `TASKS.md`, repo clonado |
+| **D-02** | `docs/ARCHITECTURE.md` v0 | ✅ Sí | Ver `MVP_DEFINITION.md`, decidir Mermaid, Docker decision |
+| **T1** | `backend/openapi.yaml` | ✅ Sí | Ver `MVP_DEFINITION.md`, OpenAPI 3.1 |
+| **T2** | `backend/prisma/schema.prisma` + docker | ✅ Sí | Ver `MVP_DEFINITION.md`, Prisma docs |
 
-**Tareas D-01 a D-05**: listas para **Semana 1**. **D-06 y D-07**: listas para **Semana 2** (dependen de D-02/D-04).
+**Todo el equipo puede empezar la semana 1** con estas 4 tareas + enablers (`T0`, `X1`, `X3`).
 
 ---
 

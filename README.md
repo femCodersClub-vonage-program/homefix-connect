@@ -209,5 +209,5 @@ homefix-connect/
 ---
 
 **Mentora**: Mariellys Soto  
-**Duración estimada**: 6 semanas  
+**Plazo**: proyecto de 6 semanas totales · **quedan 4 semanas**
 **Equipo**: 1 mentora + 3 desarrolladoras
