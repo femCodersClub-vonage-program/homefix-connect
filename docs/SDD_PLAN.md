@@ -62,7 +62,7 @@
 |-------|-------------|-----------|--------|
 | **Contrato** | Pact | OpenAPI endpoints + webhooks Vonage | Antes de implementar (rojo) |
 | **Unitario** | Vitest | Services, utils, hooks, components | Junto a implementación |
-| **Integración** | Supertest + Testcontainers | Rutas Express + Prisma + Vonage mocks | Antes de merge |
+| **Integración** | Supertest + PostgreSQL local | Rutas Express + Prisma + Vonage mocks | Antes de merge |
 | **E2E** | Playwright | Flujo completo: 2 browsers (tenant + tech) → join → hangup → SMS | Semana 3-4, para la demo |
 
 **Cobertura mínima**: `lines > 80%`, `branches > 70%`, `functions > 80%` en CI.
@@ -258,7 +258,7 @@ homefix-connect/
 │   │   ├── SERVICES.md            ← VideoService, MessagingService, IncidentService...
 │   │   ├── WEBHOOKS.md            ← HMAC, reintentos, idempotencia, payloads Vonage
 │   │   ├── DATABASE.md            ← Prisma patterns, migraciones, seeds, queries comunes
-│   │   └── TESTING.md             ← Pact provider, Supertest, Testcontainers setup
+│   │   └── TESTING.md             ← Pact provider, Supertest, PostgreSQL local (docker) setup
 │   ├── src/
 │   └── package.json
 ├── frontend/
@@ -333,3 +333,21 @@ homefix-connect/
 - Messages API (SMS): https://developer.vonage.com/en/messaging/overview
 - Server SDK Node: https://github.com/Vonage/vonage-node-sdk
 - Webhook Signing: https://developer.vonage.com/en/concepts/guides/signing-messages
+
+---
+
+## 19. Framework Operativo de Skills SDD
+
+Para automatizar y asegurar el cumplimiento riguroso de la metodología SDD asistida por IA, el repositorio dispone de un conjunto de skills modulares en `skills/sdd-*` y un flujo documentado en detalle en [`docs/SDD_FRAMEWORK.md`](./SDD_FRAMEWORK.md):
+
+1. **`sdd-01-project-discovery`**: Descubrimiento de contexto y mapa de arquitectura (`specs/project-context.md`).
+2. **`sdd-02-issue-analysis`**: Análisis del problema de negocio y alcance del issue.
+3. **`sdd-03-requirements-clarification`**: Entrevista de clarificación para resolver dudas críticas con el usuario.
+4. **`sdd-04-specification-writer`**: Redacción de especificaciones formales con contratos entrada/salida y acceptance criteria.
+5. **`sdd-05-issue-template-manager`**: Sincronización con `.github/ISSUE_TEMPLATE/tarea.md`.
+6. **`sdd-06-implementation-planner`**: Plan técnico paso a paso y estrategia TDD.
+7. **`sdd-07-implementation`**: Desarrollo controlado integrando las skills técnicas (`frontend-dev-guidelines`, `vercel-react-best-practices`, `react-best-practices`, `nodejs-backend-patterns`, `architecture-patterns`, `error-handling-patterns`).
+8. **`sdd-08-specification-validation`**: Verificación con `pnpm check`, `pnpm test` y evidencias objetivas.
+9. **`sdd-09-pr-template-manager`**: Preparación del PR completando `.github/pull_request_template.md`.
+
+Consulta [`docs/SDD_FRAMEWORK.md`](./SDD_FRAMEWORK.md) para la guía operativa completa.

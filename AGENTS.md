@@ -103,24 +103,30 @@ Todo el detalle (qué deberías ver, cómo apagar, errores comunes) está en
 
 ---
 
-## 5. Flujo de una tarea
+## 5. Flujo de una tarea — Framework SDD
+
+El desarrollo sigue la metodología **Spec-Driven Development (SDD)** asistida por el set de skills locales en `skills/sdd-*` (guía completa en [`docs/SDD_FRAMEWORK.md`](./docs/SDD_FRAMEWORK.md)):
 
 ```
-1. Tomar el issue de la fila más alta de docs/TASKS.md §10
-2. Asignármelo en GitHub Project y moverlo a "In progress"
-3. REFINAR en el issue (comentario), antes de escribir código:
-     - forma del payload / campos necesarios
-     - estados / enums / nombres
-     - dependencias reales (¿mock o espera?)
-     - si crece > 1 día → partir en dos issues
-4. Crear la rama
-5. Escribir el test (rojo) → implementar (verde)
-6. pnpm check && pnpm test
-7. PR → CI verde + 1 approval → squash merge → "Done"
+1. Tomar el issue de la fila más alta de docs/TASKS.md §10 y moverlo a "In progress"
+2. ANÁLISIS & CLARIFICACIÓN (skills/sdd-02 y sdd-03):
+     - Mapear caso de uso y dependencias (hard/soft)
+     - Entrevista con el usuario: resolver dudas críticas antes de codear
+     - Principio de datos mínimos: si crece > 1 día → partir en dos issues
+3. ESPECIFICACIÓN & ISSUE (skills/sdd-04 y sdd-05):
+     - Redactar specs/features/<ID>/02-specification.md (contratos, errores, Given/When/Then)
+     - Completar .github/ISSUE_TEMPLATE/tarea.md en el issue
+4. PLAN TÉCNICO (skills/sdd-06) → PARAR para aprobación explícita del usuario
+5. CREAR RAMA: <prefijo>/<ID>-<slug>
+6. IMPLEMENTACIÓN CONTROLADA (skills/sdd-07):
+     - Activar skills técnicas de frontend / backend según corresponda
+     - TDD: escribir test (rojo) → implementar (verde)
+7. VALIDACIÓN (skills/sdd-08): pnpm check && pnpm test (capturar evidencias reales)
+8. PULL REQUEST (skills/sdd-09): rellenar .github/pull_request_template.md → squash merge
 ```
 
-El refinamiento **no es opcional**: los issues fijan el caso de uso y el criterio
-de aceptación, pero **no** fijan modelo, payload ni nombres.
+El refinamiento y la especificación **no son opcionales**: los issues fijan el caso de uso y el criterio de aceptación, pero **no** fijan modelo, payload ni nombres. Todo cambio se especifica antes de codificar.
+
 
 ### 5.1 Si la especificación está incompleta
 
@@ -237,40 +243,39 @@ Commits pequeños y con un propósito. Nada de `wip`, `fixes` ni `varios cambios
 
 ---
 
-## 9. Estándares de código, Patrones y Skills Recomendadas
+## 9. Estándares de código, Patrones y Skills del Proyecto
 
 ### 9.1 Patrones y Arquitectura General
 - **TypeScript estricto** (`strict`, `noUncheckedIndexedAccess`). Prohibido `any` implícito; si necesitas escapar, usa `unknown` + validación.
+- **ESM en el backend**: los imports internos llevan extensión `.js` (`import { prisma } from './db/client.js'`).
 - **Validación de entrada con `zod`** en todo endpoint o formulario que reciba datos.
 - **KISS y YAGNI**: No forzar patrones hiper-complejos ni sobrediseñar si una abstracción simple o hook/servicio resuelve la necesidad del MVP.
 - **Sin `console.log`** en backend: usa el logger (`src/lib/logger.ts`).
 - **Sin secretos ni teléfonos reales** en código, tests, seeds ni fixtures.
 - **Sin refactors oportunistas** dentro de un PR de funcionalidad.
+- Comentarios solo para el **por qué**, no para el qué.
 
 ### 9.2 Frontend (React & TypeScript)
-- **Arquitectura Hexagonal / Decoupled**: Separación clara entre el dominio de UI y los adaptadores (APIs, SDKs de vídeo/mensajería).
-- **Separación de Lógica y Datos**: React Query (TanStack Query) para estado del servidor y Context API o Zustand para el estado global de UI (evitando prop-drilling).
-- **Principios SOLID (Inversión de Dependencias - DIP)**: Inyección o abstracción de servicios de API/SDK para desacolplar componentes de la lógica de negocio.
+- **Separación de Lógica y UI**: React Query (TanStack Query) para el estado del servidor. Context API solo si es necesario; **prohibido añadir librerías de estado global externas (Zustand/Redux)** sin un ADR y PR aprobado.
+- **Inversión de Dependencias (DIP)**: Desacoplar adaptadores (API HTTP, SDKs como Vonage) de los componentes de UI mediante hooks o servicios.
 - **Formularios y Validación**: Zod con React Hook Form para esquemas y validación estricta de entrada.
-- **Skills Recomendadas para Frontend**:
-  - `frontend-dev-guidelines`: Estandarización de rutas, data-fetching y estructura de archivos.
-  - `vercel-react-best-practices`: Optimización de rendimiento (lazy loading, separación client/server componentes).
-  - `react-best-practices`: Patrones recomendados de hooks, composición y estado predecible.
 
 ### 9.3 Backend (Node.js & TypeScript)
-- **Clean Architecture / Hexagonal**: Definición clara de dominio, aplicación y adaptadores (controllers, services, repositories).
-- **DDD (Domain-Driven Design)**: Value Objects inmutables y Aggregates cuando la complejidad de dominio lo requiera.
-- **Validación Estricta**: Valida todas las entradas (bodies, query params) antes de ejecutar la lógica de negocio usando Zod.
-- **Controladores Ligeros**: Traslada la lógica de negocio a servicios aislados con límites de repositorio probables y testeables.
-- **Skills Recomendadas para Backend**:
-  - `nodejs-backend-patterns`: Buenas prácticas en Express/Node.js, autenticación, caching y modularidad.
-  - `architecture-patterns`: Implementaciones y guía sobre Clean Architecture, Hexagonal y DDD.
-  - `error-handling-patterns`: Manejo de errores por capas, captura centralizada y logs estructurados.
+- **Arquitectura en Capas**: Rutas ligeras (`routes/`), lógica de negocio en servicios puros (`services/`), acceso a datos en `db/`.
+- **Validación Estricta**: Valida todas las entradas (bodies, query params, headers de webhooks) antes de ejecutar la lógica de negocio usando Zod.
+- **Controladores Ligeros**: Traslada la lógica de negocio a servicios aislados y testeables sin levantar Express ni Postgres.
 
 ### 9.4 Integración Fullstack
 - **Monorepo**: Compartir tipos y validaciones (esquemas Zod) entre frontend y backend.
 - **Proxy API**: Backend / Vite proxy para solicitudes durante desarrollo evitando problemas de CORS.
 - **Testing**: Vitest para pruebas unitarias y rápidas en ambos workspaces.
+
+### 9.5 Skills Locales Disponibles (en `skills/`)
+El repositorio cuenta con skills instaladas localmente para asistir el desarrollo:
+- **Skills SDD (`skills/sdd-*`)**: `sdd-01-project-discovery`, `sdd-02-issue-analysis`, `sdd-03-requirements-clarification`, `sdd-04-specification-writer`, `sdd-05-issue-template-manager`, `sdd-06-implementation-planner`, `sdd-07-implementation`, `sdd-08-specification-validation`, `sdd-09-pr-template-manager`.
+- **Skills Técnicas Frontend (`skills/`)**: `frontend-dev-guidelines`, `vercel-react-best-practices`, `react-best-practices`.
+- **Skills Técnicas Backend (`skills/`)**: `nodejs-backend-patterns`, `architecture-patterns`, `error-handling-patterns`.
+
 
 ---
 
