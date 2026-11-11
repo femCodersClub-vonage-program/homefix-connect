@@ -1,0 +1,124 @@
+openapi: 3.1.0
+info:
+  title: Homefix Connect API
+  version: 0.1.0
+
+paths:
+  /api/health:
+    get:
+      summary: Comprueba que el backend está vivo
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, timestamp]
+                properties:
+                  status:
+                    type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /api/incidents/{id}:
+    get:
+      summary: Detalle de una incidencia con su visita y sesión de vídeo
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Incidencia encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Incident"
+        "404":
+          description: Incidencia no existe
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+components:
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+
+    IncidentStatus:
+      type: string
+      enum:
+        - REPORTED
+        - VISIT_ASSIGNED
+        - VIDEO_COMPLETED
+        - CLOSED
+
+    VisitStatus:
+      type: string
+      enum:
+        - PENDING
+        - CONFIRMED
+        - COMPLETED
+        - CANCELLED
+
+    VideoSessionStatus:
+      type: string
+      enum:
+        - PENDING
+        - ACTIVE
+        - ENDED
+
+    Incident:
+      type: object
+      required: [id, title, description, status, technician, visit]
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: [string, "null"]
+        status:
+          $ref: "#/components/schemas/IncidentStatus"
+        technician:
+          oneOf:
+            - type: "null"
+            - type: object
+              required: [id, name]
+              properties:
+                id:
+                  type: string
+                name:
+                  type: string
+        visit:
+          oneOf:
+            - type: "null"
+            - type: object
+              required: [id, status, scheduledAt, videoSession]
+              properties:
+                id:
+                  type: string
+                status:
+                  $ref: "#/components/schemas/VisitStatus"
+                scheduledAt:
+                  type: string
+                  format: date-time
+                videoSession:
+                  oneOf:
+                    - type: "null"
+                    - type: object
+                      required: [id, status]
+                      properties:
+                        id:
+                          type: string
+                        status:
+                          $ref: "#/components/schemas/VideoSessionStatus"
