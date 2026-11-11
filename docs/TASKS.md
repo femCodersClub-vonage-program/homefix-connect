@@ -3,7 +3,7 @@
 > **Plazo**: el proyecto empezó hace 2 semanas; **quedan 4 semanas**.
 > **Objetivo**: tener en local, lo antes posible, una **videollamada 1-a-1 con Vonage Video** y, al colgar, **2 SMS con Vonage Messages**. Backend-first; frontend mínimo.
 >
-> **Referencias**: [`MVP_DEFINITION.md`](./MVP_DEFINITION.md) · [`SDD_PLAN.md`](./SDD_PLAN.md) · [`AGENTS.md`](../AGENTS.md) · [`ARCHITECTURE.md`](./ARCHITECTURE.md) · [`LOCAL_SETUP.md`](./LOCAL_SETUP.md)
+> **Referencias**: [`MVP_DEFINITION.md`](./MVP_DEFINITION.md) · [`SDD_PLAN.md`](./SDD_PLAN.md) · [`SDD_FRAMEWORK.md`](./SDD_FRAMEWORK.md) · [`AGENTS.md`](../AGENTS.md) · [`ARCHITECTURE.md`](./ARCHITECTURE.md) · [`LOCAL_SETUP.md`](./LOCAL_SETUP.md)
 
 ---
 
@@ -30,7 +30,7 @@
 | Todo lleva test | Estrategia de mock/stub concreta |
 | Separación backend/frontend | Estructura de carpetas y patrones |
 
-**Los issues no fijan modelo ni payload.** Fijan el caso de uso y el criterio de aceptación; las decisiones técnicas las toma quien implementa y las anota en el issue.
+**Los issues no fijan modelo ni payload.** Fijan el caso de uso y el criterio de aceptación; las decisiones técnicas las toma quien implementa y las anota en el issue siguiendo el flujo SDD ([`docs/SDD_FRAMEWORK.md`](./SDD_FRAMEWORK.md)).
 
 ---
 
@@ -44,39 +44,21 @@
 
 ---
 
-## 3. Definición de "lista para tomar" (cada quien la refina)
+## 3. Definición de "lista para tomar" (Refinamiento y Plantilla)
 
-Antes de escribir código, quien toma el issue completa en el propio issue:
+Antes de escribir código, quien toma el issue completa la plantilla oficial del repositorio en [`.github/ISSUE_TEMPLATE/tarea.md`](../.github/ISSUE_TEMPLATE/tarea.md) (gestionada automáticamente con la skill `sdd-05-issue-template-manager`).
 
-```markdown
-## Caso de uso (fijo)
-<de MVP_DEFINITION.md>
-
-## Criterio de aceptación (fijo, conductual)
-- [ ] <resultado observable>
-
-## Qué hace / cómo lo hace (a completar antes de empezar)
-- Qué: <resultado observable en una frase>
-- Cómo: <enfoque y piezas tocadas>
-
-## Datos mínimos
-- Campos: <solo los que el criterio de aceptación necesita>
-- Estados / enums: <del flujo del MVP, sin añadidos>
-
-## A refinar por quien toma la tarea (antes de empezar)
-- [ ] Forma del payload / campos necesarios
-- [ ] Estados / enums / nombres
-- [ ] Decisiones anotadas como comentario en el issue
-- [ ] Actualizar contrato/schema en el mismo PR
-
-## Dependencias
-- Hard: <o "ninguna">
-- Soft (mock hasta que exista): <tarea>
-```
+Los aspectos indispensables a refinar antes de codificar son:
+1. **Caso de uso fijo**: Extraído de [`MVP_DEFINITION.md`](./MVP_DEFINITION.md).
+2. **Criterio de aceptación observable**: Qué debe pasar exactamente para dar por buena la tarea.
+3. **Especificación mínima (datos mínimos)**: Solo los campos indispensables para cumplir el criterio de aceptación (sin campos "por si acaso").
+4. **Payload y Contrato**: Formatos y tipos acordados (actualizando `openapi.yaml` / `schema.prisma` en el mismo PR si aplica).
+5. **Dependencias**: Hard (bloqueantes) y Soft (mockeadas).
 
 > Si al refinar la tarea crece > 1 día → se **parte en dos issues** antes de empezar.
 >
-> Regla completa de especificación incompleta y datos mínimos: [`AGENTS.md`](../AGENTS.md) §5.1.
+> Regla completa de especificación incompleta y datos mínimos: [`AGENTS.md`](../AGENTS.md) §5.1 y [`docs/SDD_FRAMEWORK.md`](./SDD_FRAMEWORK.md).
+
 
 ---
 

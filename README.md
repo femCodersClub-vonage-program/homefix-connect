@@ -160,10 +160,17 @@ homefix-connect/
 ├── docs/                          # Documentación cross-cutting
 │   ├── ARCHITECTURE.md            # v0: ADRs + diagramas
 │   ├── LOCAL_SETUP.md             # Cómo levantar y apagar el proyecto
-│   ├── MVP_DEFINITION.md          # Alcance y escenarios Gherkin
+│   ├── MVP_DEFINITION.md          # Alcance canónico y escenarios Gherkin
 │   ├── SDD_PLAN.md                # Metodología SDD
-│   ├── TASKS.md                   # Plan de tareas y orden de toma
-│   └── Homefix_Connect_MVP_Casos_de_Uso.md
+│   ├── SDD_FRAMEWORK.md           # Guía operativa del framework de skills SDD
+│   └── TASKS.md                   # Plan de tareas y orden de toma
+├── skills/                        # Skills locales para asistentes de IA y desarrollo
+│   ├── frontend-* / react-*       # Skills técnicas de frontend
+│   ├── nodejs-* / architecture-*  # Skills técnicas de backend
+│   └── sdd-*                      # 9 skills del flujo SDD
+├── specs/                         # Artefactos de especificación generados por SDD
+│   ├── project-context.md         # Contexto global del proyecto
+│   └── features/                  # Especificaciones por tarea/issue
 ├── backend/
 │   ├── AGENTS.md                  # Reglas específicas del backend
 │   ├── prisma/schema.prisma       # Modelo de datos (v0)
@@ -199,11 +206,11 @@ homefix-connect/
 
 - [Guía de puesta en marcha](./docs/LOCAL_SETUP.md) — Instalar, levantar, comprobar y apagar, paso a paso
 - [AGENTS.md](./AGENTS.md) — Ramas, commits, testing, entorno y constraints para IA
+- [Definición del MVP](./docs/MVP_DEFINITION.md) — Alcance canónico, escenarios Gherkin, APIs Vonage y criterios de aceptación
 - [Arquitectura v0](./docs/ARCHITECTURE.md) — ADRs, diagramas, seguridad y observabilidad
-- [Plan de tareas](./docs/TASKS.md) — Oleadas, dependencias y orden de toma
-- [Definición del MVP](./docs/MVP_DEFINITION.md) — Alcance, escenarios Gherkin, APIs Vonage y criterios de aceptación
+- [Framework SDD](./docs/SDD_FRAMEWORK.md) — Flujo operativo de 9 fases y uso de skills asistidas por IA
 - [Plan SDD](./docs/SDD_PLAN.md) — Metodología Specification-Driven Development
-- [MVP y Casos de Uso](./docs/Homefix_Connect_MVP_Casos_de_Uso.md) — Documento de definición inicial (referencia)
+- [Plan de tareas](./docs/TASKS.md) — Oleadas, dependencias y orden de toma
 
 ## 🔐 Seguridad
 
@@ -216,12 +223,13 @@ homefix-connect/
 
 ## 🤝 Contribuir
 
-1. Toma un issue de [`docs/TASKS.md`](./docs/TASKS.md) y **refínalo antes de codear**
-2. Crea la rama desde `main`: `<prefijo>/<ID>-<slug>` (ej. `feat/A3-video-tokens`)
-3. Commit siguiendo [Conventional Commits](https://www.conventionalcommits.org/)
+1. Toma un issue de [`docs/TASKS.md`](./docs/TASKS.md) y **sigue el flujo SDD** ([`docs/SDD_FRAMEWORK.md`](./docs/SDD_FRAMEWORK.md))
+2. Refina el issue completando la plantilla [`.github/ISSUE_TEMPLATE/tarea.md`](./.github/ISSUE_TEMPLATE/tarea.md)
+3. Crea la rama desde `main`: `<prefijo>/<ID>-<slug>` (ej. `feat/A3-video-tokens`)
+4. Commit siguiendo [Conventional Commits](https://www.conventionalcommits.org/)
    (`feat:`, `fix:`, `spec:`, `test:`, `docs:`, `chore:`…)
-4. `pnpm check && pnpm test` en verde
-5. Abre un Pull Request: **CI verde + 1 approval** → **squash merge**
+5. `pnpm check && pnpm test` en verde
+6. Abre un Pull Request usando la plantilla: **CI verde + 1 approval** → **squash merge**
 
 Detalle completo en [`AGENTS.md`](./AGENTS.md).
 
