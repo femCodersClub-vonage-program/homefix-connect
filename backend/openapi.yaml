@@ -44,7 +44,57 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-
+  /api/video-tokens:
+    post:
+      summary: Genera un token para entrar a la videollamada de una incidencia
+      parameters: # 1. Cabeceras (login simulado)
+        - name: X-User-Id
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: X-User-Role
+          in: header
+          required: true
+          schema:
+            $ref: "#/components/schemas/Role"
+      requestBody: # 2. Lo que envía el front
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VideoTokenRequest"
+      responses: # 3. Si va bien
+        "200":
+          description: Token generado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VideoTokenResponse"
+        "400":
+          description: Falta incidentId o las cabeceras
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: No autorizado (rol incorrecto o sin permisos)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: La incidencia no existe
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: La incidencia no está en VISIT_ASSIGNED o la visita no está en CONFIRMED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 components:
   schemas:
     Error:
@@ -109,7 +159,7 @@ components:
           type: string
         token:
           type: string
-    
+
     Incident:
       type: object
       required: [id, title, description, status, technician, visit]
