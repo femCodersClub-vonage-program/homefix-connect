@@ -77,6 +77,39 @@ components:
         - ACTIVE
         - ENDED
 
+    Role:
+      type: string
+      enum:
+        - TENANT
+        - TECHNICIAN
+        - MANAGER
+
+    NotificationStatus:
+      type: string
+      enum:
+        - QUEUED
+        - SUBMITTED
+        - DELIVERED
+        - FAILED
+
+    VideoTokenRequest:
+      type: object
+      required: [incidentId]
+      properties:
+        incidentId:
+          type: string
+
+    VideoTokenResponse:
+      type: object
+      required: [applicationId, sessionId, token]
+      properties:
+        applicationId:
+          type: string
+        sessionId:
+          type: string
+        token:
+          type: string
+    
     Incident:
       type: object
       required: [id, title, description, status, technician, visit]
