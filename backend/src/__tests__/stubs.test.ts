@@ -7,6 +7,11 @@ import {
   type IncidentWithRelations,
 } from '../repositories/incident.repo.js';
 import {
+  InMemoryVideoSessionRepo,
+  type VideoSessionRepo,
+  type VideoSessionWithVisit,
+} from '../repositories/video-session.repo.js';
+import {
   InMemoryMessagingService,
   type MessagingService,
 } from '../services/messaging.service.js';
@@ -62,6 +67,34 @@ function makeIncident(
     createdAt: now,
     updatedAt: now,
     technician,
+    visit,
+    ...overrides,
+  };
+}
+
+function makeVideoSession(
+  overrides: Partial<VideoSessionWithVisit> = {},
+): VideoSessionWithVisit {
+  const now = new Date();
+
+  const visit: Visit = {
+    id: 'visit_demo',
+    incidentId: 'inc_demo',
+    scheduledAt: now,
+    status: 'CONFIRMED',
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  return {
+    id: 'vs_demo',
+    visitId: 'visit_demo',
+    vonageSessionId: null,
+    status: 'PENDING',
+    startedAt: null,
+    endedAt: null,
+    createdAt: now,
+    updatedAt: now,
     visit,
     ...overrides,
   };
@@ -124,5 +157,88 @@ describe('InMemoryIncidentRepo', () => {
     await expect(repo.findById('inc_demo')).resolves.toMatchObject({
       status: 'VIDEO_COMPLETED',
     });
+  });
+});
+
+describe('InMemoryVideoSessionRepo', () => {
+  it('cumple el contrato VideoSessionRepo y encuentra la sesión por visitId', async () => {
+    const repo: VideoSessionRepo = new InMemoryVideoSessionRepo([
+      makeVideoSession(),
+    ]);
+
+    await expect(repo.findByVisitId('visit_demo')).resolves.toMatchObject({
+      id: 'vs_demo',
+      status: 'PENDING',
+    });
+  });
+
+  it('encuentra la sesión por vonageSessionId con su visita', async () => {
+    const repo = new InMemoryVideoSessionRepo([
+      makeVideoSession({ vonageSessionId: 'vonage_session_demo' }),
+    ]);
+
+    const result = await repo.findByVonageSessionId('vonage_session_demo');
+
+    expect(result).toMatchObject({
+      id: 'vs_demo',
+      visit: { incidentId: 'inc_demo' },
+    });
+  });
+
+  it('devuelve null cuando no encuentra la sesión', async () => {
+    const repo = new InMemoryVideoSessionRepo();
+
+    await expect(repo.findByVisitId('no-existe')).resolves.toBeNull();
+    await expect(
+      repo.findByVonageSessionId('no-existe'),
+    ).resolves.toBeNull();
+  });
+
+  it('guarda el vonageSessionId y activa la sesión', async () => {
+    const repo = new InMemoryVideoSessionRepo([makeVideoSession()]);
+    const startedAt = new Date();
+
+    const updated = await repo.update('vs_demo', {
+      vonageSessionId: 'vonage_session_demo',
+      status: 'ACTIVE',
+      startedAt,
+    });
+
+    expect(updated).toMatchObject({
+      vonageSessionId: 'vonage_session_demo',
+      status: 'ACTIVE',
+      startedAt,
+    });
+    await expect(repo.findByVisitId('visit_demo')).resolves.toMatchObject({
+      vonageSessionId: 'vonage_session_demo',
+      status: 'ACTIVE',
+    });
+  });
+
+  it('cierra la sesión sin borrar el vonageSessionId', async () => {
+    const repo = new InMemoryVideoSessionRepo([
+      makeVideoSession({
+        vonageSessionId: 'vonage_session_demo',
+        status: 'ACTIVE',
+      }),
+    ]);
+
+    const updated = await repo.update('vs_demo', {
+      status: 'ENDED',
+      endedAt: new Date(),
+    });
+
+    expect(updated).toMatchObject({
+      vonageSessionId: 'vonage_session_demo',
+      status: 'ENDED',
+    });
+  });
+
+  it('lanza error al actualizar una sesión inexistente', async () => {
+    const repo = new InMemoryVideoSessionRepo();
+
+    await expect(repo.update('no-existe', { status: 'ENDED' })).rejects.toThrow(
+      'VideoSession no-existe not found',
+    );
   });
 });
