@@ -82,7 +82,7 @@ Solo estas son **dependencia dura**. Todas pequeñas.
 | **T0** | Monorepo scaffold (workspaces + scripts + `.env.example`) | M | fase-0 | Fase 0 · Base | — |
 | **T1** | Contrato OpenAPI (schemas + paths + `gen:types`) | M | fase-0, spec | Fase 0 · Base | — |
 | **T2** | Prisma schema + `docker-compose` Postgres + seed | M | fase-0, spec | Fase 0 · Base | — |
-| **X1** | Interfaces + stubs (`VideoService`, `MessagingService`, `IncidentRepo`) | S | fase-0 | Fase 0 · Base | — |
+| **X1** | Interfaces + stubs (`VideoService`, `MessagingService`, `IncidentRepo`, `VideoSessionRepo`) | S | fase-0 | Fase 0 · Base | — |
 | **X2** | CI (lint + typecheck + test + build) | S | fase-0 | Fase 0 · Base | T0 (soft) |
 | **X3** | Middleware verificación HMAC | S | fase-0 | Fase 0 · Base | — |
 
