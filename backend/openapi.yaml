@@ -31,6 +31,18 @@ paths:
           required: true
           schema:
             type: string
+        # Login simulado del MVP: el backend aún no las exige, pero el
+        # frontend ya las envía y el contrato debe reconocerlas.
+        - name: X-User-Id
+          in: header
+          required: false
+          schema:
+            type: string
+        - name: X-User-Role
+          in: header
+          required: false
+          schema:
+            $ref: "#/components/schemas/Role"
       responses:
         "200":
           description: Incidencia encontrada
@@ -91,6 +103,12 @@ paths:
                 $ref: "#/components/schemas/Error"
         "409":
           description: La incidencia no está en VISIT_ASSIGNED o la visita no está en CONFIRMED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Falta configuración del servidor (VONAGE_APPLICATION_ID)
           content:
             application/json:
               schema:
@@ -161,6 +179,9 @@ components:
           type: string
 
     Incident:
+      # Subconjunto intencional: el cliente del MVP solo consume estos campos.
+      # La respuesta real de Prisma incluye tenant, manager, createdAt,
+      # updatedAt y visit.videoSession; se omiten a propósito (no son contrato).
       type: object
       required: [id, title, description, status, technician, visit]
       properties:
