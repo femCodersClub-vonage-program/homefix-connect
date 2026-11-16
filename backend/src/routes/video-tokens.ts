@@ -2,10 +2,12 @@ import { Router } from "express";
 import { z } from "zod";
 
 import type { IncidentRepo } from "../repositories/incident.repo.js";
+import type { VideoSessionRepo } from "../repositories/video-session.repo.js";
 import type { VideoService } from "../services/video.service.js";
 
 export type VideoTokensDeps = {
   incidentRepo: IncidentRepo;
+  videoSessionRepo: VideoSessionRepo;
   videoService: VideoService;
   applicationId: string | undefined;
 };
@@ -21,8 +23,39 @@ const bodySchema = z.object({
 });
 
 export function createVideoTokensRouter(deps: VideoTokensDeps) {
-  const { incidentRepo, videoService, applicationId } = deps;
+  const { incidentRepo, videoSessionRepo, videoService, applicationId } = deps;
   const router = Router();
+
+  // Guard: si llegan dos peticiones a la vez para la misma VideoSession sin
+  // vonageSessionId, solo la primera crea la sala de Vonage; la segunda reutiliza
+  // esa misma promesa y recibe el mismo id. La promesa se queda guardada al
+  // terminar bien (así una petición que leyó la BD antes del update tampoco crea
+  // otra sala) y se borra si falla, para poder reintentar. Vive en memoria del
+  // proceso: suficiente para el MVP con una sola instancia del backend.
+  const pendingCreations = new Map<string, Promise<string>>();
+
+  function ensureVonageSession(
+    videoSessionId: string,
+    visitId: string,
+  ): Promise<string> {
+    const pending = pendingCreations.get(videoSessionId);
+    if (pending) return pending;
+
+    const creation = (async () => {
+      const { sessionId } = await videoService.createSession(visitId);
+      await videoSessionRepo.update(videoSessionId, {
+        vonageSessionId: sessionId,
+      });
+      return sessionId;
+    })();
+
+    creation.catch(() => {
+      pendingCreations.delete(videoSessionId);
+    });
+
+    pendingCreations.set(videoSessionId, creation);
+    return creation;
+  }
 
   router.post("/video-tokens", async (req, res, next) => {
     try {
@@ -83,21 +116,17 @@ export function createVideoTokensRouter(deps: VideoTokensDeps) {
         throw new Error("VONAGE_APPLICATION_ID no está configurado");
       }
 
-      // Primer acceso: se crea la sala de Vonage y se guarda su id
-      let vonageSessionId = session.vonageSessionId;
-
-      if (!vonageSessionId) {
-        const created = await videoService.createSession(visit.id);
-        vonageSessionId = created.sessionId;
-        await incidentRepo.updateVideoSession(session.id, { vonageSessionId });
-      }
+      // Primer acceso (lazy-create): se crea la sala de Vonage y se guarda su id
+      const vonageSessionId =
+        session.vonageSessionId ??
+        (await ensureVonageSession(session.id, visit.id));
 
       // Token personal para esta persona y este rol
       const { token } = await videoService.generateToken(vonageSessionId, role);
 
       // La primera entrada pasa la sesión a ACTIVE
       if (session.status === "PENDING") {
-        await incidentRepo.updateVideoSession(session.id, {
+        await videoSessionRepo.update(session.id, {
           status: "ACTIVE",
           startedAt: new Date(),
         });

@@ -1,14 +1,8 @@
-import type {
-    Incident,
-    IncidentStatus,
-    PrismaClient,
-    VideoSession,
-} from "@prisma/client";
+import type { Incident, IncidentStatus, PrismaClient } from "@prisma/client";
 
 import type {
-    IncidentRepo,
-    IncidentWithRelations,
-    VideoSessionUpdate,
+  IncidentRepo,
+  IncidentWithRelations,
 } from "./incident.repo.js";
 
 export class PrismaIncidentRepo implements IncidentRepo {
@@ -27,15 +21,5 @@ export class PrismaIncidentRepo implements IncidentRepo {
 
   updateStatus(id: string, status: IncidentStatus): Promise<Incident> {
     return this.prisma.incident.update({ where: { id }, data: { status } });
-  }
-
-  updateVideoSession(
-    videoSessionId: string,
-    data: VideoSessionUpdate,
-  ): Promise<VideoSession> {
-    return this.prisma.videoSession.update({
-      where: { id: videoSessionId },
-      data,
-    });
   }
 }

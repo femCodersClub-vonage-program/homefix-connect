@@ -13,6 +13,7 @@ import {
     InMemoryIncidentRepo,
     type IncidentWithRelations,
 } from "../repositories/incident.repo.js";
+import { InMemoryVideoSessionRepo } from "../repositories/video-session.repo.js";
 import { InMemoryVideoService } from "../services/video.service.js";
 
 vi.mock("../db/client.js", () => ({ prisma: {} }));
@@ -87,18 +88,28 @@ function makeIncident(options: FixtureOptions = {}): IncidentWithRelations {
 
 // Cada test crea su propia app con stubs: sin Postgres ni Vonage.
 function setup(options: FixtureOptions = {}) {
-  const incidentRepo = new InMemoryIncidentRepo([makeIncident(options)]);
+  const incident = makeIncident(options);
+  const incidentRepo = new InMemoryIncidentRepo([incident]);
+
+  // La VideoSession vive en su propio repo (VideoSessionRepo), con su visita.
+  const { videoSession, ...visit } = incident.visit!;
+  const videoSessionRepo = new InMemoryVideoSessionRepo([
+    { ...videoSession!, visit },
+  ]);
+
+  const videoService = new InMemoryVideoService();
   const app = createApp({
     incidentRepo,
-    videoService: new InMemoryVideoService(),
+    videoSessionRepo,
+    videoService,
     applicationId: APP_ID,
   });
-  return { app, incidentRepo };
+  return { app, incidentRepo, videoSessionRepo, videoService };
 }
 
 describe("POST /api/video-tokens", () => {
   it("CA-01 · la inquilina entra: crea la sesión, devuelve token y la pasa a ACTIVE", async () => {
-    const { app, incidentRepo } = setup();
+    const { app, videoSessionRepo } = setup();
 
     const res = await request(app)
       .post("/api/video-tokens")
@@ -112,11 +123,46 @@ describe("POST /api/video-tokens", () => {
       token: "stub-token-TENANT-stub-session-visit_demo",
     });
 
-    const incident = await incidentRepo.findById("inc_demo");
-    expect(incident?.visit?.videoSession?.status).toBe("ACTIVE");
-    expect(incident?.visit?.videoSession?.vonageSessionId).toBe(
-      "stub-session-visit_demo",
-    );
+    const session = await videoSessionRepo.findByVisitId("visit_demo");
+    expect(session?.status).toBe("ACTIVE");
+    expect(session?.vonageSessionId).toBe("stub-session-visit_demo");
+  });
+
+  it("CA-09 · dos peticiones simultáneas solo crean una sesión de Vonage", async () => {
+    const { app, videoService } = setup();
+    const createSession = vi.spyOn(videoService, "createSession");
+
+    const [tenantRes, technicianRes] = await Promise.all([
+      request(app)
+        .post("/api/video-tokens")
+        .set(TENANT)
+        .send({ incidentId: "inc_demo" }),
+      request(app)
+        .post("/api/video-tokens")
+        .set(TECHNICIAN)
+        .send({ incidentId: "inc_demo" }),
+    ]);
+
+    expect(tenantRes.status).toBe(200);
+    expect(technicianRes.status).toBe(200);
+    expect(createSession).toHaveBeenCalledTimes(1);
+    expect(tenantRes.body.sessionId).toBe(technicianRes.body.sessionId);
+  });
+
+  it("CA-02 · si ya hay vonageSessionId no se crea otra sesión", async () => {
+    const { app, videoService } = setup({
+      sessionStatus: "ACTIVE",
+      vonageSessionId: "vonage_existente",
+    });
+    const createSession = vi.spyOn(videoService, "createSession");
+
+    const res = await request(app)
+      .post("/api/video-tokens")
+      .set(TENANT)
+      .send({ incidentId: "inc_demo" });
+
+    expect(res.status).toBe(200);
+    expect(createSession).not.toHaveBeenCalled();
   });
 
   it("CA-02 · la técnica entra a una sesión ya activa y recibe la misma sessionId", async () => {
