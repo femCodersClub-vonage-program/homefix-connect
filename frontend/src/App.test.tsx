@@ -2,7 +2,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import App from './App.js';
+import App, { getIncidentIdFromUrl } from './App.js';
+import { makeIncidentFixture } from './test/fixtures/incident.js';
 
 function renderApp() {
   const queryClient = new QueryClient({
@@ -20,44 +21,33 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+describe('getIncidentIdFromUrl', () => {
+  it('usa inc_demo cuando la URL no trae incidentId', () => {
+    expect(getIncidentIdFromUrl('')).toBe('inc_demo');
+  });
+
+  it('lee incidentId de la URL', () => {
+    expect(getIncidentIdFromUrl('?incidentId=inc_otra')).toBe('inc_otra');
+  });
+});
+
 describe('App', () => {
-  it('muestra el título del MVP', () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({ status: 'ok', timestamp: '2026-01-01T00:00:00Z' }),
-      }),
-    );
+  it('renderiza la incidencia por defecto', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => makeIncidentFixture(),
+    });
+    vi.stubGlobal('fetch', fetchMock);
 
     renderApp();
 
     expect(
-      screen.getByRole('heading', { name: /homefix connect/i }),
+      await screen.findByRole('heading', { name: /fuga de agua/i }),
     ).toBeInTheDocument();
-  });
-
-  it('muestra el estado del backend cuando la API responde', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({ status: 'ok', timestamp: '2026-01-01T00:00:00Z' }),
-      }),
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/incidents/inc_demo',
+      expect.anything(),
     );
-
-    renderApp();
-
-    expect(await screen.findByText(/backend: ok/i)).toBeInTheDocument();
-  });
-
-  it('muestra error cuando la API no responde', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
-
-    renderApp();
-
-    expect(
-      await screen.findByText(/sin conexión con la api/i),
-    ).toBeInTheDocument();
   });
 });
