@@ -94,9 +94,9 @@ se añaden sin un ADR aprobado.
 | `pnpm db:studio` | Explorador web de la base de datos |
 | `pnpm db:reset` | ⚠️ Borra el volumen y recrea + siembra |
 
-> `pnpm gen:types` **todavía no existe**: lo añade la tarea **T1** al crear
-> `backend/openapi.yaml`. Hasta entonces el frontend usa
-> `frontend/src/api/http.ts`.
+> `pnpm gen:types` **todavía no existe**: lo añade la tarea **C1** al generar
+> el cliente desde `backend/openapi.yaml` (T1 solo fija el contrato). Hasta
+> entonces el frontend usa `frontend/src/api/http.ts`.
 
 Todo el detalle (qué deberías ver, cómo apagar, errores comunes) está en
 [`docs/LOCAL_SETUP.md`](./docs/LOCAL_SETUP.md).
@@ -192,7 +192,7 @@ Scopes habituales: `video`, `messaging`, `webhooks`, `api`, `db`, `frontend`,
 
 ```
 feat(video): generate Vonage token endpoint
-fix(webhooks): validate HMAC signature
+fix(webhooks): validate JWT signature
 spec(api): add VideoTokenResponse schema
 test(contract): add POST /video-tokens
 docs(agents): add commit and branch conventions

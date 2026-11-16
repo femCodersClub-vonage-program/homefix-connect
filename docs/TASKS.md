@@ -16,7 +16,7 @@
 | **D-01** `AGENTS.md` (raíz + capas) y **D-02** `ARCHITECTURE.md` v0 | rama `docs/foundation-docs` |
 
 **Siguiente fila de la cola**: `T1` (contrato OpenAPI), `X1` (interfaces + stubs),
-`X3` (HMAC). Después, la fila 3 (`A1`, `A2`, `B1`, `C1`, `C2`, `C3`).
+`X3` (firma JWT HS256 de webhooks). Después, la fila 3 (`A1`, `A2`, `B1`, `C1`, `C2`, `C3`).
 
 ---
 
@@ -80,11 +80,11 @@ Solo estas son **dependencia dura**. Todas pequeñas.
 | ID | Tarea | Size | Labels | Milestone | Blocked by |
 |----|-------|------|--------|-----------|------------|
 | **T0** | Monorepo scaffold (workspaces + scripts + `.env.example`) | M | fase-0 | Fase 0 · Base | — |
-| **T1** | Contrato OpenAPI (schemas + paths + `gen:types`) | M | fase-0, spec | Fase 0 · Base | — |
+| **T1** | Contrato OpenAPI (schemas + paths) | M | fase-0, spec | Fase 0 · Base | — |
 | **T2** | Prisma schema + `docker-compose` Postgres + seed | M | fase-0, spec | Fase 0 · Base | — |
 | **X1** | Interfaces + stubs (`VideoService`, `MessagingService`, `IncidentRepo`, `VideoSessionRepo`) | S | fase-0 | Fase 0 · Base | — |
 | **X2** | CI (lint + typecheck + test + build) | S | fase-0 | Fase 0 · Base | T0 (soft) |
-| **X3** | Middleware verificación HMAC | S | fase-0 | Fase 0 · Base | — |
+| **X3** | Middleware verificación firma JWT (HS256) | S | fase-0 | Fase 0 · Base | — |
 
 ## 6. Oleada 1 — Backend (semana 1-2, paralelo)
 
@@ -105,7 +105,7 @@ Solo estas son **dependencia dura**. Todas pequeñas.
 
 | ID | Tarea | Size | Labels | Blocked by |
 |----|-------|------|--------|------------|
-| **C1** | Cliente API generado desde OpenAPI | XS | fase-1, frontend | T1 |
+| **C1** | Cliente API generado desde OpenAPI (+ `pnpm gen:types`) | XS | fase-1, frontend | T1 |
 | **C2** | Pantalla `IncidentDetail` (datos + botón) | S | fase-1, frontend | C1 (mock data) |
 | **C3** | `VideoCall`: init SDK + vídeo local + cleanup | M | fase-1, frontend | C1 (token fixture) |
 | **C4** | `VideoCall`: vídeo remoto + eventos | S | fase-1, frontend | C3 |
@@ -174,7 +174,7 @@ main (protegida)
 ### Commits (Conventional Commits)
 ```
 feat(video): generate Vonage token endpoint
-fix(webhooks): validate HMAC signature
+fix(webhooks): validate JWT signature
 spec(api): add VideoTokenResponse schema
 test(contract): add GET /incidents/:id
 docs(agents): add commit and branch conventions
@@ -189,6 +189,20 @@ chore(monorepo): init pnpm workspaces
 ### Frontera backend ↔ frontend
 - **`backend/openapi.yaml` es la frontera.** Si cambia, se avisa en el sync.
 - El frontend usa **solo** tipos generados (`pnpm gen:types`).
+
+### Decisiones de alcance (MVP simple)
+
+Decisiones tomadas en el refinamiento y que aplican a las tareas siguientes:
+
+- **Firma de webhooks Vonage**: JWT **HS256** con `payload_hash` del cuerpo
+  original (X3). No es un HMAC plano; no se acepta ningún otro algoritmo.
+- **Replay fuera de alcance**: no se validan `iat`/`exp`/`jti`. A cambio, A4 y
+  B4 **deben ser idempotentes** (un webhook repetido no reenvía SMS ni duplica
+  notificaciones). Mejora futura con issue propio.
+- **`gen:types`**: se implementa en C1 con `openapi-typescript`. Al ser una
+  dependencia nueva, C1 incluye su ADR en `docs/ARCHITECTURE.md`.
+- **El frontend recibe** `applicationId`, `sessionId` y `token`; la clave privada
+  de Vonage **nunca** sale del backend.
 
 ### Sync
 - **2×/semana, máx 30 min**: qué hice / qué haré / blockers + aprobar PRs.
