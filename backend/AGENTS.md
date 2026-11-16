@@ -19,7 +19,12 @@ backend/
 │   ├── index.ts              # arranque del servidor (:3000) + shutdown
 │   ├── app.ts                # createApp(): middlewares, rutas, 404 y errores
 │   ├── config/env.ts         # validación de entorno con zod
-│   ├── lib/logger.ts         # pino → logs/app.jsonl
+│   ├── lib/
+│   │   ├── logger.ts         # pino → logs/app.jsonl
+│   │   ├── rawBody.ts        # guarda el cuerpo original (firma de webhooks)
+│   │   └── vonageSignature.ts # verifica el JWT firmado de Vonage
+│   ├── middleware/
+│   │   └── verifyVonageSignature.ts # 401 si el webhook no viene de Vonage (X3)
 │   ├── db/
 │   │   ├── client.ts         # instancia única de PrismaClient
 │   │   └── seed.ts           # datos de demo (IDs fijos)
@@ -95,7 +100,7 @@ frontend que los referencien.
 - Toda llamada a Vonage se hace detrás de un service testeable con mocks. En los
   tests **no** se llama a la API real.
 - Los webhooks se validan por firma **antes** de procesar el payload
-  (`X3` para HMAC).
+  (`X3`: JWT HS256 de Vonage + `payload_hash`; no es HMAC plano).
 
 ## 7. Logging
 
