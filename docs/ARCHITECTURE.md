@@ -48,7 +48,7 @@ flowchart LR
   BE -- "Server SDK: enviar SMS" --> VM
   FE -- "Web SDK: WebRTC (media P2P)" --> VV
   VV -. "webhook session.end" .-> BE
-  VM -. "webhook message.status" .-> BE
+  VM -. "webhook message.status (post-MVP)" .-> BE
 ```
 
 **Lectura clave:** la **media** del vídeo no pasa por el backend (va por WebRTC
@@ -72,7 +72,7 @@ sequenceDiagram
   T->>F: Pulsa "Entrar a la videollamada"
   F->>B: POST /api/video-tokens (X-User-Id, X-User-Role)
   B->>DB: Incidencia VISIT_ASSIGNED + visita CONFIRMED
-  B-->>F: { token, sessionId, apiKey }
+  B-->>F: { applicationId, sessionId, token }
   F->>V: Conecta con el token (WebRTC)
   Note over T,V: Inquilina y técnica se ven y se oyen
 
@@ -82,8 +82,8 @@ sequenceDiagram
   B->>M: Enviar SMS a gestora e inquilina
   M-->>B: messageId
   B->>DB: 2 Notification en QUEUED
-  M-->>B: webhook message.status (submitted/delivered)
-  B->>DB: Notification DELIVERED
+  M-->>B: webhook message.status (post-MVP)
+  B->>DB: Notification DELIVERED (post-MVP)
   F->>B: GET /api/incidents/:id
   B-->>F: estado VIDEO_COMPLETED
   F->>T: Toast "Visita finalizada"
