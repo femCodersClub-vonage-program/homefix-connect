@@ -80,9 +80,9 @@ Solo estas son **dependencia dura**. Todas pequeñas.
 | ID | Tarea | Size | Labels | Milestone | Blocked by |
 |----|-------|------|--------|-----------|------------|
 | **T0** | Monorepo scaffold (workspaces + scripts + `.env.example`) | M | fase-0 | Fase 0 · Base | — |
-| **T1** | Contrato OpenAPI (schemas + paths + `gen:types`) | M | fase-0, spec | Fase 0 · Base | — |
+| **T1** | Contrato OpenAPI (schemas + paths) | M | fase-0, spec | Fase 0 · Base | — |
 | **T2** | Prisma schema + `docker-compose` Postgres + seed | M | fase-0, spec | Fase 0 · Base | — |
-| **X1** | Interfaces + stubs (`VideoService`, `MessagingService`, `IncidentRepo`) | S | fase-0 | Fase 0 · Base | — |
+| **X1** | Interfaces + stubs (`VideoService`, `MessagingService`, `IncidentRepo`, `VideoSessionRepo`) | S | fase-0 | Fase 0 · Base | — |
 | **X2** | CI (lint + typecheck + test + build) | S | fase-0 | Fase 0 · Base | T0 (soft) |
 | **X3** | Middleware verificación HMAC | S | fase-0 | Fase 0 · Base | — |
 
@@ -105,7 +105,7 @@ Solo estas son **dependencia dura**. Todas pequeñas.
 
 | ID | Tarea | Size | Labels | Blocked by |
 |----|-------|------|--------|------------|
-| **C1** | Cliente API generado desde OpenAPI | XS | fase-1, frontend | T1 |
+| **C1** | Cliente API generado desde OpenAPI (+ `pnpm gen:types`) | XS | fase-1, frontend | T1 |
 | **C2** | Pantalla `IncidentDetail` (datos + botón) | S | fase-1, frontend | C1 (mock data) |
 | **C3** | `VideoCall`: init SDK + vídeo local + cleanup | M | fase-1, frontend | C1 (token fixture) |
 | **C4** | `VideoCall`: vídeo remoto + eventos | S | fase-1, frontend | C3 |

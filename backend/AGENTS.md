@@ -28,21 +28,29 @@ backend/
 │   ├── db/
 │   │   ├── client.ts         # instancia única de PrismaClient
 │   │   └── seed.ts           # datos de demo (IDs fijos)
+│   ├── services/             # X1: contratos + stubs en memoria
+│   │   ├── video.service.ts       # VideoService (A1/A2)
+│   │   └── messaging.service.ts   # MessagingService (B1/B2)
+│   ├── repositories/         # X1: acceso a datos + stubs en memoria
+│   │   ├── incident.repo.ts       # IncidentRepo
+│   │   └── video-session.repo.ts  # VideoSessionRepo (A1/A3/A4)
 │   └── routes/               # un archivo por recurso
 │       ├── health.ts         # GET /api/health
 │       └── incidents.ts      # GET /api/incidents/:id  (provisional, ver T1)
 └── logs/app.jsonl            # generado al ejecutar (ignorado por git)
 ```
 
-Las carpetas `services/` y `webhooks/` **se crean con A1/A2 y A4**: no las
-añadas vacías.
+`services/` y `repositories/` contienen las interfaces y stubs creados en X1; las
+implementaciones reales llegan con A1/A2/A3/A4 y B1/B2/B3. `webhooks/` se crea
+cuando una tarea lo necesite: no la añadas vacía.
 
 ## 3. Reglas de capas
 
 | Capa | Puede | No puede |
 |---|---|---|
 | `routes/` | Leer `req`, validar con `zod`, llamar a un service o a Prisma, devolver JSON | Contener lógica de negocio, llamar a Vonage directamente |
-| `services/` (cuando exista) | Lógica de negocio pura, orquestación, llamadas a SDKs | Importar `express`, `req`/`res`, o saber de HTTP |
+| `services/` | Lógica de negocio pura, orquestación, llamadas a SDKs | Importar `express`, `req`/`res`, o saber de HTTP |
+| `repositories/` | Interfaces de acceso a datos y stubs en memoria | Lógica de negocio, `express`, llamadas a SDKs |
 | `db/` | Prisma | Reglas de negocio |
 | `lib/` | Utilidades transversales (logger, firmas, helpers) | Depender de `routes/` |
 
