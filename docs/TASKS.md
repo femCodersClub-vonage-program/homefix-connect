@@ -90,22 +90,22 @@ Solo estas son **dependencia dura**. Todas pequeñas.
 
 | ID | Tarea | Size | Labels | Blocked by |
 |----|-------|------|--------|------------|
-| **A1** | `VideoService.createSession` (Vonage Video) | S | fase-1, backend-video | T1, T2 |
-| **A2** | `VideoService.generateToken` (Vonage Video) | S | fase-1, backend-video | T1, T2 |
-| **A3** | `POST /video-tokens` (validaciones 403/409) | S | fase-1, backend-video | A2 |
-| **A4** | `POST /webhooks/video-events` (`session.end`) | S | fase-1, backend-video | A1, X1, X3 |
+| **A1** | `VideoService.createSession` real (se implementa en el mismo PR que A2) | S | fase-1, backend-video | T1, T2 |
+| **A2** | `VideoService` real: `createSession` + `generateToken` (Vonage Video) | S | fase-1, backend-video | T1, T2 |
+| **A3** | `POST /video-tokens` (validaciones 403/409; crea la sesión si no tiene id) | S | fase-1, backend-video | A2 |
+| **A4** | `POST /webhooks/video-events` (`session.end`; 400 si el id no existe, idempotente, 2 SMS una sola vez) | S | fase-1, backend-video | A2, X1, X3 |
 | **A5** | Tests video (unit + contract) | S | fase-1, backend-video, test | A3, A4 |
 | **B1** | Cliente Vonage Messages (wrapper) | S | fase-1, backend-messaging | T1, T2 |
 | **B2** | `MessagingService.sendSms` + plantilla post-visita | S | fase-1, backend-messaging | B1 |
 | **B3** | `sendPostVisit` + registros `Notification` | S | fase-1, backend-messaging | B2, X1 |
-| **B4** | `POST /webhooks/message-status` | S | fase-1, backend-messaging | B2 |
-| **B5** | Tests messaging (unit + contract + integration) | S | fase-1, backend-messaging, test | B3, B4 |
+| **B4** | *(post-MVP)* `POST /webhooks/message-status` | S | post-mvp, backend-messaging | B2 |
+| **B5** | Tests messaging (unit + contract) | S | fase-1, backend-messaging, test | B3 |
 
 ## 7. Oleada 2 — Frontend (semana 1-2, con mocks)
 
 | ID | Tarea | Size | Labels | Blocked by |
 |----|-------|------|--------|------------|
-| **C1** | Cliente API generado desde OpenAPI (+ `pnpm gen:types`) | XS | fase-1, frontend | T1 |
+| **C1** | Cliente API generado desde OpenAPI (`openapi-typescript` + ADR; salida commiteada) | XS | fase-1, frontend | T1 |
 | **C2** | Pantalla `IncidentDetail` (datos + botón) | S | fase-1, frontend | C1 (mock data) |
 | **C3** | `VideoCall`: init SDK + vídeo local + cleanup | M | fase-1, frontend | C1 (token fixture) |
 | **C4** | `VideoCall`: vídeo remoto + eventos | S | fase-1, frontend | C3 |
@@ -196,13 +196,21 @@ Decisiones tomadas en el refinamiento y que aplican a las tareas siguientes:
 
 - **Firma de webhooks Vonage**: JWT **HS256** con `payload_hash` del cuerpo
   original (X3). No es un HMAC plano; no se acepta ningún otro algoritmo.
-- **Replay fuera de alcance**: no se validan `iat`/`exp`/`jti`. A cambio, A4 y
-  B4 **deben ser idempotentes** (un webhook repetido no reenvía SMS ni duplica
-  notificaciones). Mejora futura con issue propio.
-- **`gen:types`**: se implementa en C1 con `openapi-typescript`. Al ser una
-  dependencia nueva, C1 incluye su ADR en `docs/ARCHITECTURE.md`.
-- **El frontend recibe** `applicationId`, `sessionId` y `token`; la clave privada
-  de Vonage **nunca** sale del backend.
+- **Replay fuera de alcance**: no se validan `iat`/`exp`/`jti`. A cambio, **A4
+  debe ser idempotente**: un `session.end` repetido no reenvía los SMS.
+- **Sesión de vídeo**: se crea en el **primer acceso** a `POST /video-tokens`
+  (A2/A3) y se persiste en `VideoSession.vonageSessionId`. No hay paso manual en
+  el panel de Vonage ni id precreado en el seed. A3 añade un guard para que dos
+  peticiones simultáneas no creen dos sesiones.
+- **Entrega de SMS (post-MVP)**: el webhook `message.status` no entra en el MVP;
+  las `Notification` se quedan en `QUEUED`. El enum `NotificationStatus` se
+  mantiene por si se retoma.
+- **`gen:types`**: se implementa en C1 con `openapi-typescript` y la salida se
+  commitea (nadie necesita generarla para arrancar). Al ser una dependencia
+  nueva, C1 incluye su ADR en `docs/ARCHITECTURE.md`.
+- **Clave privada de Vonage**: `VONAGE_PRIVATE_KEY_PATH` en local (el archivo
+  está en `.gitignore`); en producción se inyecta como secreto, nunca en el
+  repo. La clave **nunca** sale del backend.
 
 ### Sync
 - **2×/semana, máx 30 min**: qué hice / qué haré / blockers + aprobar PRs.
