@@ -7,16 +7,18 @@
 
 ---
 
-## 0. Estado actual (2026-11-10)
+## 0. Estado actual (2026-11-16)
 
 | Hecho | Dónde |
 |---|---|
 | **T0** monorepo, **T2** Prisma + Docker + seed, **X2** CI | PR #27 (`chore/foundation`) — CI verde |
-| Guía de arranque `docs/LOCAL_SETUP.md` | PR #27 |
+| **T1** contrato OpenAPI, **X1** interfaces + stubs, **X3** firma JWT de webhooks | PR #31, #30, #32 |
+| Decisiones de alcance (sesión lazy, `message.status` post-MVP, C1 con `openapi-typescript`) | PR #34 |
+| **C2** pantalla de detalle de incidencia | PR #33 (revisada, pendiente de merge) |
 | **D-01** `AGENTS.md` (raíz + capas) y **D-02** `ARCHITECTURE.md` v0 | rama `docs/foundation-docs` |
 
-**Siguiente fila de la cola**: `T1` (contrato OpenAPI), `X1` (interfaces + stubs),
-`X3` (firma JWT HS256 de webhooks). Después, la fila 3 (`A1`, `A2`, `B1`, `C1`, `C2`, `C3`).
+**Siguiente fila de la cola**: `A2` (`VideoService` real), `B1` y `C1`.
+**A1 no existe como tarea**: se absorbió en A2 (ver §6).
 
 ---
 
@@ -65,7 +67,7 @@ Los aspectos indispensables a refinar antes de codificar son:
 ## 4. Timeline (4 semanas restantes)
 
 ```
-Semana 1: Enablers (T0, T1, T2, X1, X2, X3) + arrancar A1/A2/B1/C1
+Semana 1: Enablers (T0, T1, T2, X1, X2, X3) + arrancar A2/B1/C1
 Semana 2: Backend video + messaging + pantallas frontend
 Semana 3: Integración I1 (ngrok, vídeo real, SMS real) + tests
 Semana 4: Buffer, fixes, edge cases, demo, AGENTS/ARCHITECTURE
@@ -90,7 +92,6 @@ Solo estas son **dependencia dura**. Todas pequeñas.
 
 | ID | Tarea | Size | Labels | Blocked by |
 |----|-------|------|--------|------------|
-| **A1** | `VideoService.createSession` real (se implementa en el mismo PR que A2) | S | fase-1, backend-video | T1, T2 |
 | **A2** | `VideoService` real: `createSession` + `generateToken` (Vonage Video) | S | fase-1, backend-video | T1, T2 |
 | **A3** | `POST /video-tokens` (validaciones 403/409; crea la sesión si no tiene id) | S | fase-1, backend-video | A2 |
 | **A4** | `POST /webhooks/video-events` (`session.end`; 400 si el id no existe, idempotente, 2 SMS una sola vez) | S | fase-1, backend-video | A2, X1, X3 |
@@ -100,6 +101,10 @@ Solo estas son **dependencia dura**. Todas pequeñas.
 | **B3** | `sendPostVisit` + registros `Notification` | S | fase-1, backend-messaging | B2, X1 |
 | **B4** | *(post-MVP)* `POST /webhooks/message-status` | S | post-mvp, backend-messaging | B2 |
 | **B5** | Tests messaging (unit + contract) | S | fase-1, backend-messaging, test | B3 |
+
+> **A1 está absorbida por A2.** No hay tarea «A1» ni issue abierto: `createSession`
+> se implementa en el mismo PR que `generateToken`. Si un documento antiguo
+> menciona A1, se resuelve en **A2**.
 
 ## 7. Oleada 2 — Frontend (semana 1-2, con mocks)
 
@@ -143,7 +148,7 @@ Solo estas son **dependencia dura**. Todas pequeñas.
 ```
 1. T0, T1, T2, X1, X2, X3            (enablers, cualquier orden entre sí)
         ▼
-2. A1, A2, B1, C1, C2, C3            (primeros tomables)
+2. A2, B1, C1, C2, C3               (primeros tomables)
         ▼
 3. A3, A4, B2, B3, B4, C4, C5
         ▼
@@ -194,6 +199,9 @@ chore(monorepo): init pnpm workspaces
 
 Decisiones tomadas en el refinamiento y que aplican a las tareas siguientes:
 
+- **A1 absorbida por A2**: el `VideoService` real (`createSession` +
+  `generateToken`) es **una sola tarea y un solo PR**. El issue #7 (A1) se cerró
+  como «no planeado» y todo su alcance vive en el issue #8 (A2).
 - **Firma de webhooks Vonage**: JWT **HS256** con `payload_hash` del cuerpo
   original (X3). No es un HMAC plano; no se acepta ningún otro algoritmo.
 - **Replay fuera de alcance**: no se validan `iat`/`exp`/`jti`. A cambio, **A4
@@ -235,8 +243,8 @@ Decisiones tomadas en el refinamiento y que aplican a las tareas siguientes:
 ```
 T0 + T1 + T2 + X1 + X3  (semana 1)
       │
-      ├─ A1 → A2 → A3 → A4 → A5   (video backend)
-      ├─ B1 → B2 → B3 → B4 → B5   (SMS backend)
+      ├─ A2 → A3 → A4 → A5        (video backend)
+      ├─ B1 → B2 → B3 → B5        (SMS backend; B4 es post-MVP)
       └─ C1 → C2 → C3 → C4 → C5 → C6 (frontend)
       │
       ▼

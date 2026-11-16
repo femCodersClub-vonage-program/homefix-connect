@@ -533,7 +533,7 @@ Si aparece `homefix-db` en `Up`, `pnpm db:down` debería quitarlo. Si está en
 
 Es importante no confundir «levanta» con «funciona el MVP»:
 
-- ❌ No hay videollamada (Vonage Video): carriles `A1-A5` y `C3-C4`.
+- ❌ No hay videollamada (Vonage Video): carriles `A2-A5` y `C3-C4`.
 - ❌ No hay envío de SMS (Vonage Messages): carriles `B1-B5`.
 - ❌ No hay login: el MVP usa cabeceras simuladas `X-User-Id` / `X-User-Role`.
 - ❌ No hay pantalla de detalle de incidencia: tarea `C2`.

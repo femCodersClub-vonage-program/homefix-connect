@@ -40,7 +40,7 @@ La incidencia **ya existe** en el sistema con:
 - Estado: `VISIT_ASSIGNED`
 - Visita: `CONFIRMED`, con técnica asignada y fecha/hora programada
 - Sesión de video: `PENDING` y **sin `vonageSessionId`** — la sesión de Vonage
-  la crea el backend al primer acceso (tarea **A1**), no forma parte del seed
+  la crea el backend al primer acceso (tarea **A2**), no forma parte del seed
 - Usuarios: inquilina (reporter), técnica y gestora
 
 Esto es exactamente lo que deja `pnpm db:seed` (ver IDs fijos en
