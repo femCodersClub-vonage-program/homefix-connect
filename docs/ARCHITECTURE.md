@@ -143,7 +143,7 @@ sequenceDiagram
 
 - **Contexto:** dos capas, tres personas, y tipos que se desincronizan.
 - **Decisión:** `backend/openapi.yaml` es la fuente de verdad del contrato; el
-  frontend consume tipos generados (`pnpm gen:types`, tarea **T1**) y no escribe
+  frontend consume tipos generados (`pnpm gen:types`, tarea **C1**) y no escribe
   interfaces a mano.
 - **Consecuencias:** un cambio de contrato es visible y revisable. Mientras T1 no
   exista, `frontend/src/api/http.ts` es un cliente **provisional**.
