@@ -23,7 +23,9 @@ sin firma, con firma incorrecta o con el cuerpo alterado recibe
 
 **Fuera:**
 - Crear las rutas `/api/webhooks/video-events` (A4, #10) y `/api/webhooks/message-status` (B4, #15). Ellas montarán este middleware.
-- Protección contra reenvíos (*replay*) por `iat`/`jti`, e idempotencia (A4/B4, I2).
+- Protección contra reenvíos (*replay*) por `iat`/`jti`. Un `session.end`
+  repetido podría reenviar los 2 SMS: la idempotencia se exige en A4/B4 (un
+  webhook repetido no vuelve a notificar) y el *replay* queda como mejora futura.
 - Un secreto distinto por API (ver §14).
 
 ## 3. Caso de uso

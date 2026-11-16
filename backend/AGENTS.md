@@ -100,7 +100,7 @@ frontend que los referencien.
 - Toda llamada a Vonage se hace detrás de un service testeable con mocks. En los
   tests **no** se llama a la API real.
 - Los webhooks se validan por firma **antes** de procesar el payload
-  (`X3` para HMAC).
+  (`X3`: JWT HS256 de Vonage + `payload_hash`; no es HMAC plano).
 
 ## 7. Logging
 

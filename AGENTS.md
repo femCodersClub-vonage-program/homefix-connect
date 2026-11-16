@@ -192,7 +192,7 @@ Scopes habituales: `video`, `messaging`, `webhooks`, `api`, `db`, `frontend`,
 
 ```
 feat(video): generate Vonage token endpoint
-fix(webhooks): validate HMAC signature
+fix(webhooks): validate JWT signature
 spec(api): add VideoTokenResponse schema
 test(contract): add POST /video-tokens
 docs(agents): add commit and branch conventions
