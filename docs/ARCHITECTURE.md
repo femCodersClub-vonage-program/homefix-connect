@@ -237,7 +237,7 @@ sequenceDiagram
 | Tema | Se decide en |
 |---|---|
 | Contrato exacto de endpoints y payloads | **T1** (`openapi.yaml`) |
-| Forma de los services (clases vs funciones, inyección) | **A1/A2** |
+| Forma de los services (clases vs funciones, inyección) | **A2** |
 | Idempotencia de webhooks (dedupe por `messageId`/`sessionId`) | **A4/B4** |
 | Reintentos de SMS y fallback si Vonage falla | **B3/B5** |
 | Rate limiting y validación de origen de webhooks | **I2** |
