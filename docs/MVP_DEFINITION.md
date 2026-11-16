@@ -57,7 +57,8 @@ Dado una incidencia con estado "VISIT_ASSIGNED" y visita "CONFIRMED"
 Y la inquilina está autenticada en la aplicación
 Y la sesión de video está en estado "PENDING"
 Cuando la inquilina pulsa "Entrar a la videollamada"
-Entonces el backend genera un token Vonage Video para el rol "TENANT"
+Entonces el backend crea la sesión de Vonage Video si aún no existe, guarda su id
+Y el backend genera un token Vonage Video para el rol "TENANT"
 Y el frontend inicializa el SDK Vonage Video con ese token
 Y la inquilina ve su vídeo local y el estado "Conectando..."
 Y la sesión de video pasa a estado "ACTIVE"
@@ -91,9 +92,11 @@ Y el backend envía 2 SMS vía Vonage Messages API:
   | Gestora      | "Visita realizada para la incidencia «{titulo}» por {tecnica}. Cuando el informe esté listo te notificaremos." |
   | Inquilina    | "Visita realizada para la incidencia «{titulo}» por {tecnica}. Cuando el informe esté listo te notificaremos." |
 Y se crean 2 notificaciones en estado "QUEUED" con su providerMessageId
-Y Vonage Messages envía webhooks "message.status" (submitted → delivered)
-Y el backend actualiza las notificaciones a "SUBMITTED" y luego a "DELIVERED"
 ```
+
+> **Post-MVP:** el seguimiento de entrega (`message.status` → `SUBMITTED` y
+> `DELIVERED`) queda fuera del MVP simplificado. Las notificaciones se quedan en
+> `QUEUED` y el estado de entrega no se consulta.
 
 ### Escenario 4: el frontend avisa de que la visita terminó
 
@@ -127,7 +130,7 @@ Y el botón "Entrar a la videollamada" queda deshabilitado con el texto "Visita 
 | API | Qué usamos | Para qué en el MVP |
 |---|---|---|
 | **Vonage Video** | Server SDK (crear sesión, generar tokens) + webhook `session.end` + Web SDK (WebRTC 1-a-1) | Videollamada inquilina ↔ técnica |
-| **Vonage Messages** | Server SDK (enviar SMS) + webhook `message.status` | 2 SMS al terminar y seguimiento de entrega en BD |
+| **Vonage Messages** | Server SDK (enviar SMS) | 2 SMS al terminar. El webhook `message.status` (seguimiento de entrega) queda **post-MVP** |
 
 > Los paths, payloads y cabeceras concretas viven en `backend/openapi.yaml`
 > (tarea **T1**). Este documento no los fija.
@@ -141,6 +144,6 @@ Y el botón "Entrar a la videollamada" queda deshabilitado con el texto "Visita 
 - [ ] Ambas se ven y se oyen (WebRTC 1-a-1 funcional)
 - [ ] Al colgar se envían 2 SMS reales (Vonage Messages)
 - [ ] Los SMS llegan a gestora e inquilina (números de prueba)
-- [ ] Los webhooks de entrega actualizan el estado en la base de datos
+- [ ] **Post-MVP:** los webhooks de entrega actualizan el estado en la base de datos
 - [ ] El frontend confirma visualmente que la visita terminó
 - [ ] El README explica cómo configurar, ejecutar y probar sin publicar secretos

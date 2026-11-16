@@ -101,6 +101,11 @@ frontend que los referencien.
   tests **no** se llama a la API real.
 - Los webhooks se validan por firma **antes** de procesar el payload
   (`X3`: JWT HS256 de Vonage + `payload_hash`; no es HMAC plano).
+- La sesión de Vonage Video se crea en el **primer acceso** a
+  `POST /video-tokens` y se persiste en `VideoSession.vonageSessionId`; no se
+  precrea a mano. Si dos peticiones llegan a la vez, solo una puede crearla.
+- `VONAGE_PRIVATE_KEY_PATH` apunta al PEM local (ignorado por git). En
+  producción la clave se inyecta como secreto; **nunca** se commitea.
 
 ## 7. Logging
 
