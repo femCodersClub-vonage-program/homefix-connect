@@ -14,13 +14,13 @@ Endpoint que comprueba si una persona puede entrar en la videollamada de una inc
 
 - Ruta `POST /api/video-tokens` con validación de headers y body (zod).
 - Validaciones de existencia, permisos y estados (404 / 403 / 409).
-- Creación de la sesión de Vonage en el primer acceso si no existe (vía `VideoService.createSession`, stub).
+- Creación de la sesión de Vonage en el primer acceso si no existe (lazy-create, vía `VideoService.createSession`, stub), con guard para que dos peticiones simultáneas no creen dos sesiones.
 - Paso de la sesión de `PENDING` a `ACTIVE` al entregar el primer token.
 - Tests de contrato con Supertest.
 
 **Fuera de alcance**
 
-- Integración real con Vonage (A1/A2): se usan los stubs de X1.
+- Integración real con Vonage (A2): se usan los stubs de X1.
 - Webhook `session.end` y paso a `ENDED` (A4).
 - Autenticación real, rate limiting.
 
@@ -36,9 +36,9 @@ MVP_DEFINITION §4, Escenarios 1 y 2:
 - **RF-01:** Exponer `POST /api/video-tokens` en `src/routes/video-tokens.ts`, montado en `app.ts` bajo `/api`.
 - **RF-02:** Validar headers `X-User-Id` y `X-User-Role` y body `{ incidentId }` con zod.
 - **RF-03:** Buscar la incidencia con su visita y sesión de vídeo.
-- **RF-04:** Si la sesión no tiene `vonageSessionId`, crear la sesión con `VideoService.createSession(visitId)` y guardar el id.
+- **RF-04:** Si la sesión no tiene `vonageSessionId`, crear la sesión con `VideoService.createSession(visitId)` y guardar el id con `VideoSessionRepo.update`. Si llegan dos peticiones a la vez, solo una crea la sesión (guard, RN-07).
 - **RF-05:** Generar el token con `VideoService.generateToken(vonageSessionId, role)`.
-- **RF-06:** Si la sesión está `PENDING`, pasarla a `ACTIVE` y guardar `startedAt`.
+- **RF-06:** Si la sesión está `PENDING`, pasarla a `ACTIVE` y guardar `startedAt` (`VideoSessionRepo.update`).
 - **RF-07:** Responder 200 con `{ applicationId, sessionId, token }`.
 
 ## 5. Reglas de negocio
@@ -49,6 +49,8 @@ MVP_DEFINITION §4, Escenarios 1 y 2:
 - **RN-04:** La visita debe existir y estar en `CONFIRMED`.
 - **RN-05:** La sesión de vídeo no puede estar `ENDED`.
 - **RN-06:** Orden de comprobación: 400 → 404 → 403 → 409. Se devuelve el primer error que aplique.
+- **RN-07:** Una `VideoSession` tiene como máximo una sesión de Vonage. El guard guarda en memoria del proceso la promesa de creación por `VideoSession.id`: las peticiones concurrentes la reutilizan; si falla, se borra para poder reintentar. Suficiente para el MVP (una sola instancia del backend).
+- **RN-08:** Estados de `VideoSession`: `PENDING` → `ACTIVE` → `ENDED`. La idempotencia se basa en el estado: `ACTIVE` no se vuelve a modificar y `ENDED` → 409.
 
 ## 6. Contrato de entrada
 
@@ -86,6 +88,7 @@ Formato siempre `{ "error": "<mensaje>" }` (AGENTS.md §11).
 
 - La técnica pide token cuando la sesión ya está `ACTIVE` → 200, misma `sessionId`, sin cambiar el estado.
 - La misma persona pide token dos veces → 200 las dos veces, misma `sessionId` (no se crea otra sesión).
+- La inquilina y la técnica piden token **a la vez** en el primer acceso → 200 las dos, misma `sessionId`, `createSession` se llama una sola vez.
 - `incidentId` con espacios o vacío → 400.
 - La incidencia no tiene técnica asignada (`technicianId = null`) y la pide un `TECHNICIAN` → 403.
 - `VONAGE_APPLICATION_ID` no configurado → 500 con mensaje claro.
@@ -110,28 +113,30 @@ Formato siempre `{ "error": "<mensaje>" }` (AGENTS.md §11).
 **CA-06 · Rol que no coincide** (`usr_tenant_demo` / `TECHNICIAN`) → **Then** 403
 **CA-07 · Visita no confirmada** (visita `PENDING`) → **Then** 409
 **CA-08 · Sesión terminada** (sesión `ENDED`) → **Then** 409
+**CA-09 · Peticiones simultáneas** (sesión `PENDING` sin `vonageSessionId`, inquilina y técnica a la vez) → **Then** 200 las dos, misma `sessionId` y `createSession` llamado una sola vez
 
 ## 11. Diseño técnico
 
 - `src/routes/video-tokens.ts`: ruta, validación zod y orden de comprobaciones.
 - `src/app.ts`: `app.use('/api', videoTokensRouter)`.
-- Usa `VideoService` e `IncidentRepo` (interfaces de X1) inyectados, para poder usar los stubs en tests.
+- Usa `VideoService`, `IncidentRepo` (lectura) y `VideoSessionRepo` (escritura) inyectados, para poder usar los stubs en tests.
+- `src/repositories/prisma-video-session.repo.ts`: `PrismaVideoSessionRepo`, implementación real de `VideoSessionRepo`.
 - `backend/openapi.yaml`: actualizar la `description` del 409 para incluir la sesión `ENDED`.
 - Detalle de capas y cambios en las interfaces: ver `03-plan.md`.
 
 ## 12. Estrategia de pruebas
 
-- **Contrato (Supertest):** un test por criterio CA-01 a CA-08, contra `createApp()` con los stubs.
-- **Mocks:** `InMemoryVideoService`, `InMemoryIncidentRepo` con datos tipo seed.
+- **Contrato (Supertest):** un test por criterio CA-01 a CA-09, contra `createApp()` con los stubs.
+- **Mocks:** `InMemoryVideoService`, `InMemoryIncidentRepo` e `InMemoryVideoSessionRepo` con datos tipo seed. `vi.spyOn(videoService, 'createSession')` para comprobar que no se crean sesiones de más.
 - **Negativos:** CA-03 a CA-08.
 
 ## 13. Dependencias
 
 - **Hard:** T1 (#31, contrato) y X1 (#30, interfaces y stubs) mergeados.
-- **Soft:** A1/A2 (implementación real de Vonage), sustituible por stubs.
+- **Soft:** A2 (implementación real de Vonage: `createSession` + `generateToken`), sustituible por stubs.
 - **Librerías:** express, zod, supertest (ya en `backend/package.json`).
 
 ## 14. Preguntas abiertas y suposiciones
 
-- **S-01:** Si hay que ampliar `IncidentRepo` para guardar `vonageSessionId` y el estado de la sesión, se coordina con Miranda (autora de X1).
+- **S-01 (resuelta):** No se amplía `IncidentRepo`. La sesión se guarda con `VideoSessionRepo` (X1, Miranda).
 - **S-02:** No se valida la fecha/hora de la visita (`scheduledAt`): se puede entrar en cualquier momento mientras esté `CONFIRMED`. Motivo: el seed programa la visita a +24 h (`seed.ts` L72), así que una ventana horaria bloquearía la demo. **Mejora futura:** añadir una ventana de acceso (p. ej. desde 15 min antes de `scheduledAt`).

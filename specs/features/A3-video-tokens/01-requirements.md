@@ -24,7 +24,7 @@
 | ID   | Requisito                                                                                             | Justificación                                          |
 | ---- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
 | D-01 | `applicationId` sale de `VONAGE_APPLICATION_ID` (config), no del service                              | El service solo devuelve `{ token, expiresAt }` (X1)   |
-| D-02 | Se usan los stubs de X1 (`InMemoryVideoService`, `InMemoryIncidentRepo`) hasta que A1/A2 estén hechas | TASKS.md §10: los carriles no se bloquean gracias a X1 |
+| D-02 | Se usan los stubs de X1 (`InMemoryVideoService`, `InMemoryIncidentRepo`, `InMemoryVideoSessionRepo`) hasta que A2 esté hecha | TASKS.md §10: los carriles no se bloquean gracias a X1 |
 | D-03 | `expiresAt` y `apiKey` del criterio original **no** se devuelven                                      | Contrato T1 acordado con Mariellys                     |
 
 ## 2. Decisiones de Clarificación Acordadas
@@ -36,15 +36,19 @@
 | P3  | La sesión no tiene `vonageSessionId`                  | Se **crea** con `VideoService.createSession` y se guarda            | MVP §3 ("la crea el backend al primer acceso") + flujo de Mariellys, paso 6                                                                                                  |
 | P4  | Orden de las validaciones                             | 400 → 404 → 403 → 409                                               | Flujo recomendado por Mariellys                                                                                                                                              |
 | P5  | ¿Quién pasa la sesión a `ACTIVE`?                     | A3, al entregar el primer token (si está `PENDING`)                 | MVP Escenario 1 ("la sesión pasa a ACTIVE")                                                                                                                                  |
+| P6  | ¿Dónde se guarda la sesión de vídeo?                  | En `VideoSessionRepo.update` (no en `IncidentRepo`)                 | Miranda (X1, #30) y Mariellys 16/11: no mezclar responsabilidades; A2, A3 y A4 comparten el repo                                                                             |
+| P7  | ¿Quién crea la sesión de Vonage?                      | A3, en el primer acceso (lazy-create). No se precrea a mano ni en el seed | Decisiones de alcance (PR #34, `docs/TASKS.md`). A1 se cerró y `createSession` real va en A2                                                                         |
+| P8  | Dos peticiones simultáneas sin `vonageSessionId`      | **Guard**: solo una crea la sala; la otra recibe el mismo id        | Mariellys 16/11 y `docs/TASKS.md` (Decisiones de alcance)                                                                                                                    |
+| P9  | Idempotencia                                          | Por estado: `PENDING` → `ACTIVE`; `ACTIVE` no cambia nada; `ENDED` → 409 | Mariellys 16/11: "por estados está bien". Estados de `VideoSession`: `PENDING` → `ACTIVE` → `ENDED` |
 
 ## 3. Fuera de alcance
 
 - Webhook `session.end` y paso a `ENDED` (A4)
-- Implementación real de Vonage (A1/A2): aquí se usan los stubs
+- Implementación real de Vonage (A2): aquí se usan los stubs
 - Rate limiting (no en MVP)
 - Autenticación real (se simula con cabeceras)
 
-## 4. Pendientes detectados
+## 4. Pendientes detectados (resueltos)
 
-- El 409 del contrato (`openapi.yaml`) no menciona la sesión `ENDED`: actualizar su `description` en el PR de A3.
-- La interface `IncidentRepo` de X1 solo tiene `findById` y `updateStatus`. Para P3 y P5 hará falta guardar `vonageSessionId` y cambiar el estado de la sesión: se definirá en `03-plan.md` (coordinar con Miranda si se amplía la interface).
+- ✅ El 409 del contrato (`openapi.yaml`) no mencionaba la sesión `ENDED`: actualizada su `description` en este PR.
+- ✅ Guardar `vonageSessionId` y el estado de la sesión: se hace con `VideoSessionRepo.update` (X1). Se descartó añadir `updateVideoSession` a `IncidentRepo` (ver P6).

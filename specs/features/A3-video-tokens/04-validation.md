@@ -4,12 +4,18 @@
 
 ## Resultado de los tests
 
+Tras el rebase sobre `main` (16/11), con Node 24:
+
 ```text
-$ pnpm --filter backend test
- ✓ src/__tests__/stubs.test.ts (6 tests)
+$ pnpm test
+ backend
+ ✓ src/__tests__/verifyVonageSignature.test.ts (9 tests)
  ✓ src/__tests__/app.test.ts (4 tests)
- ✓ src/__tests__/video-tokens.test.ts (11 tests)
- Tests  21 passed (21)
+ ✓ src/__tests__/video-tokens.test.ts (13 tests)
+ Test Files  5 passed (5)
+      Tests  52 passed (52)
+ frontend
+ ✓ src/App.test.tsx (3 tests)
 
 $ pnpm check
  eslint + typecheck backend/frontend → sin errores
@@ -27,14 +33,17 @@ $ pnpm check
 | CA-06 · Rol que no coincide → 403 | `video-tokens.test.ts` | ✅ |
 | CA-07 · Visita no `CONFIRMED` o incidencia no `VISIT_ASSIGNED` → 409 | `video-tokens.test.ts` (2 tests) | ✅ |
 | CA-08 · Sesión `ENDED` → 409 | `video-tokens.test.ts` | ✅ |
+| CA-09 · Dos peticiones simultáneas → una sola sesión de Vonage | `video-tokens.test.ts` | ✅ |
+| Con `vonageSessionId` existente no se llama a `createSession` | `video-tokens.test.ts` | ✅ |
 
 ## Proceso TDD
 
 1. Fase roja: commit `test(A3): add contract tests ... (red)`: 10 de 11 tests fallaban (404, la ruta no existía).
-2. Fase verde: commit `feat(A3): implement POST /api/video-tokens (green)`: 21/21 en verde.
+2. Fase verde: commit `feat(A3): implement POST /api/video-tokens (green)`.
+3. Refactor tras la revisión: commit `refactor(A3): use VideoSessionRepo and add concurrent-creation guard`: se quita `updateVideoSession` de `IncidentRepo`, se usa `VideoSessionRepo.update` y se añade el guard (CA-09).
 
 ## Pendientes
 
-- `VideoService` usa el stub `InMemoryVideoService` hasta que A1/A2 implementen Vonage real.
+- `VideoService` usa el stub `InMemoryVideoService` hasta que A2 (#8) implemente Vonage real.
 - Probar contra la BD real (`pnpm db:seed` + `curl`) cuando Docker esté levantado.
-- PR pendiente del merge de #30 (X1) y #31 (T1).
+- El guard vive en memoria del proceso: con varias instancias haría falta un bloqueo en BD (post-MVP).
