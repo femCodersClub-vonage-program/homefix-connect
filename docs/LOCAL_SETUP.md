@@ -19,7 +19,8 @@ pnpm db:seed
 pnpm dev
 ```
 
-Abrir **http://localhost:5173** → debe decir **«Backend: ok»** en verde.
+Abrir **http://localhost:5173** → debe mostrar la incidencia de demo
+(`Fuga de agua en el baño`, visita `Confirmada`).
 Para apagar: `Ctrl + C` y luego `pnpm db:down`. Detalle y comprobaciones, abajo.
 
 ---
@@ -45,7 +46,7 @@ La aplicación son **tres piezas** que se ejecutan por separado:
 
 **Lo importante:** el frontend **no** habla con la base de datos. Habla con el
 backend. Si el backend está apagado, la web se abre pero dice
-«Sin conexión con la API».
+«No se pudo cargar la incidencia».
 
 Son **dos «programas» tuyos** (backend y frontend) y **un contenedor** (Postgres).
 Por eso hay dos formas de apagarlo todo, y hay que hacer las dos: ver
@@ -201,8 +202,10 @@ backend  dev: {"level":30,"service":"homefix-api","port":3000,"env":"development
 
 Abre **http://localhost:5173** en el navegador. Deberías ver:
 
-- el título **Homefix Connect**;
-- una tarjeta **Backend** con **«Backend: ok»** en verde y la fecha/hora actual.
+- el título de la incidencia de demo, **Fuga de agua en el baño**, con su descripción;
+- el selector de rol (**Inquilina** / **Técnica**);
+- el bloque **Incidencia** con estado, técnica y fecha de la visita;
+- el botón **Entrar a la videollamada** (habilitado; la llamada es C3/C4).
 
 Para parar: `Ctrl + C` en esa terminal. **Postgres sigue encendido** (es un
 contenedor en segundo plano); para pararlo, `pnpm db:down`
@@ -217,14 +220,14 @@ A veces no quieres los dos. Esto es lo que pasa en cada caso:
 | Quiero… | Comando | Qué funciona | Qué no |
 |---------|---------|--------------|--------|
 | **Solo el backend** | `pnpm dev:backend` | `http://localhost:3000/api/...` (curl o Postman) | La web en `:5173` no está disponible |
-| **Solo el frontend** | `pnpm dev:frontend` | La web abre en `http://localhost:5173` | Verás **«Sin conexión con la API»**: es lo esperado, el backend está apagado |
-| **Solo los tests del backend** | `pnpm --filter backend test` | 4 tests de la API | — |
-| **Solo los tests del frontend** | `pnpm --filter frontend test` | 3 tests de la interfaz | — |
+| **Solo el frontend** | `pnpm dev:frontend` | La web abre en `http://localhost:5173` | Verás **«No se pudo cargar la incidencia»**: es lo esperado, el backend está apagado |
+| **Solo los tests del backend** | `pnpm --filter backend test` | Los tests de la API | — |
+| **Solo los tests del frontend** | `pnpm --filter frontend test` | Los tests de la interfaz | — |
 | **Solo compilar el backend** | `pnpm --filter backend build` | Carpeta `backend/dist/` | — |
 | **Solo compilar el frontend** | `pnpm --filter frontend build` | Carpeta `frontend/dist/` | — |
 
 > **El frontend por sí solo no necesita Postgres.** El que necesita la base de
-> datos es el backend. Pero para que la pantalla diga «Backend: ok» hacen falta
+> datos es el backend. Pero para que la pantalla cargue la incidencia hacen falta
 > backend + Postgres.
 
 Si quieres **backend y frontend en terminales separadas** (para leer los logs de
@@ -242,18 +245,24 @@ Cada terminal se para con su propio `Ctrl + C`.
 ### 5.1 En el navegador — http://localhost:5173
 
 ```
-Homefix Connect
-MVP: videollamada 1-a-1 con Vonage Video y SMS post-visita.
+Fuga de agua en el baño
+El grifo del lavabo pierde agua desde ayer.
 
-BACKEND
-Backend: ok (2026-11-10T18:15:01.968Z)
+Rol:  (•) Inquilina   ( ) Técnica
 
-Monorepo pnpm · backend y frontend separados
-Docs: docs/MVP_DEFINITION.md · docs/TASKS.md
+INCIDENCIA
+Estado: Visita asignada
+Técnica: Técnica Demo
+Visita: 11 de noviembre de 2026, 19:14 · Confirmada
+
+[ Entrar a la videollamada ]   ← habilitado (la llamada llega en C3/C4)
 ```
 
-Si en vez de verde aparece **«Sin conexión con la API»** en rojo, el backend no
-está corriendo o se ha caído: mira la terminal donde lanzaste `pnpm dev`.
+Si en su lugar aparece **«No se pudo cargar la incidencia»** en rojo, el backend
+no está corriendo o se ha caído: mira la terminal donde lanzaste `pnpm dev`.
+
+Con un id que no existe (`http://localhost:5173/?incidentId=no_existe`) debe
+mostrar **«Incidencia no encontrada»**.
 
 ### 5.2 El backend responde
 
@@ -299,7 +308,7 @@ del `tail` sin afectar a la app.
 - [ ] `docker compose ps` → `homefix-db` en `healthy`
 - [ ] `pnpm dev` muestra `backend listening ... port: 3000`
 - [ ] `pnpm dev` muestra `Local: http://localhost:5173/`
-- [ ] Navegador en `:5173` → «Backend: ok» en verde
+- [ ] Navegador en `:5173` → muestra la incidencia `inc_demo` (no un error)
 - [ ] `curl :3000/api/incidents/inc_demo` devuelve `inc_demo`
 - [ ] `curl :5173/api/health` devuelve `"status":"ok"`
 
@@ -492,7 +501,7 @@ Si aparece `homefix-db` en `Up`, `pnpm db:down` debería quitarlo. Si está en
 | `port is already allocated` (5432) | Ya tienes otro Postgres local | Para el otro Postgres o cambia `"5432:5432"` en `docker-compose.yml` |
 | `Can't reach database server` | Postgres no está arriba o aún arranca | `pnpm db:up`, espera 5 s, `docker compose ps` debe decir `healthy` |
 | `Environment variable not found: DATABASE_URL` | Falta el `.env` | `cp .env.example .env` |
-| `Sin conexión con la API` (web) | El backend está apagado | Arranca `pnpm dev` o `pnpm dev:backend` |
+| `No se pudo cargar la incidencia` (web) | El backend está apagado | Arranca `pnpm dev` o `pnpm dev:backend` |
 | `Cannot find module '@prisma/client'` | No se generó el cliente de Prisma | `pnpm db:generate` |
 | `docker: command not found` | Docker no está instalado | Instala Docker y `docker compose` |
 | `Cannot connect to the Docker daemon` | Docker está instalado pero apagado | Abre Docker Desktop / `sudo systemctl start docker` |
@@ -536,9 +545,9 @@ Es importante no confundir «levanta» con «funciona el MVP»:
 - ❌ No hay videollamada (Vonage Video): carriles `A1-A5` y `C3-C4`.
 - ❌ No hay envío de SMS (Vonage Messages): carriles `B1-B5`.
 - ❌ No hay login: el MVP usa cabeceras simuladas `X-User-Id` / `X-User-Role`.
-- ❌ No hay pantalla de detalle de incidencia: tarea `C2`.
 - ✅ Lo que sí hay: monorepo, base de datos, seed, API de salud, endpoint de
-  lectura de incidencia y pantalla que confirma que el backend responde.
+  lectura de incidencia y pantalla de detalle que muestra la incidencia y el
+  estado de la visita. El botón de la videollamada aún no conecta.
 
 El plan completo de tareas está en [`TASKS.md`](./TASKS.md) y el alcance del MVP
 en [`MVP_DEFINITION.md`](./MVP_DEFINITION.md).

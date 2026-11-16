@@ -120,8 +120,8 @@ pnpm dev:backend
 pnpm dev:frontend
 ```
 
-Abre **http://localhost:5173**. Deberías ver «Homefix Connect» y la tarjeta
-**Backend: ok**.
+Abre **http://localhost:5173**. Deberías ver la incidencia de demo (`Fuga de agua
+en el baño`), su estado y el botón **Entrar a la videollamada**.
 
 Webhooks locales (a partir de la semana 3, con Vonage real):
 
