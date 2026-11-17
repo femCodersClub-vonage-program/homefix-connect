@@ -101,9 +101,29 @@ Library no se registra. Se añadió `afterEach(cleanup)` en
 
 ---
 
-## 5. Pendientes fuera de C2
+## 5. Demo manual
 
-- Demo manual `?incidentId=inc_demo` con backend + seed: **pendiente**, el
-  daemon de Docker no estaba arrancado en el entorno local.
+Verificada el 2026-11-17 con Node 24, `pnpm db:up`, `pnpm db:push`,
+`pnpm db:seed` y `pnpm dev`:
+
+```text
+$ curl :3000/api/health
+→ {"status":"ok","timestamp":"..."}
+
+$ curl :3000/api/incidents/inc_demo
+→ inc_demo · VISIT_ASSIGNED · visit_demo CONFIRMED · vs_demo PENDING
+
+$ curl :5173/api/incidents/inc_demo
+→ mismo JSON a través del proxy de Vite
+
+$ curl :5173/api/incidents/no_existe
+→ 404
+```
+
+## 6. Pendientes fuera de C2
+
 - Reconciliar `IncidentDetailData` con los tipos generados en **C1** (T1 ya cerrado).
 - Cablear el `onClick` del botón con el token de vídeo (**C3/C4**).
+- `GET /api/incidents/:id` sigue devolviendo el superset de Prisma
+  (`tenant`, `manager` y los `phone`/`email` de los usuarios). La UI no los
+  consume, pero debe reconciliarse con `openapi.yaml` en una tarea de backend.

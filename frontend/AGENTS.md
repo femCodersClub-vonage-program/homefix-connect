@@ -18,14 +18,20 @@ frontend/
 ├── vite.config.ts           # proxy /api → :3000, envDir: '..', vitest
 └── src/
     ├── main.tsx             # QueryClientProvider + render
-    ├── App.tsx              # pantalla "Homefix Connect" (smoke)
+    ├── App.tsx              # render de IncidentDetail con ?incidentId=
     ├── api/http.ts          # cliente HTTP provisional (C1 lo sustituye)
+    ├── api/incidents.ts     # tipos provisionales + getIncident (C2)
+    ├── components/          # JoinButton (C2)
+    ├── hooks/               # useIncident (C2)
+    ├── pages/               # IncidentDetail (C2)
     ├── index.css            # estilos base
-    └── test/setup.ts        # jest-dom
+    └── test/
+        ├── fixtures/        # fixtures de API (C2)
+        └── setup.ts         # jest-dom + cleanup de Testing Library
 ```
 
-Carpetas que **se crean con las tareas**, no antes: `components/`, `pages/`,
-`hooks/` (C2-C5).
+`components/`, `pages/`, `hooks/` y `test/fixtures/` se crearon en C2. C3-C5
+añaden las suyas.
 
 ## 3. Componentes vs hooks
 
@@ -51,9 +57,8 @@ hook.
 ```
 
 - **Nada se escribe a mano que duplique el contrato.** Mientras `pnpm gen:types`
-  no exista (T1), usa `getJson<T>()` de `src/api/http.ts` con tipos locales
-  marcados como provisionales. Cuando T1 exista, C1 sustituye `http.ts` por el
-  cliente generado y los tipos locales desaparecen.
+  no exista, usa `getJson<T>()` de `src/api/http.ts` con tipos locales marcados
+  como provisionales. C1 añade el cliente generado y `http.ts` desaparece.
 - La URL base sale de `VITE_API_BASE_URL` (vacía en local: el proxy de Vite
   resuelve `/api`).
 
@@ -78,7 +83,8 @@ hook.
 ## 7. Tests en esta capa
 
 - Vitest con `environment: 'jsdom'` (ya configurado).
-- Testing Library + `userEvent`. Nada de `container.querySelector`.
+- Testing Library + `fireEvent` (`user-event` no está instalado). Nada de
+  `container.querySelector`.
 - Consulta por rol/texto visible: `getByRole('button', { name: /entrar/i })`.
 - Mockea `fetch` con `vi.stubGlobal` (patrón ya usado en `App.test.tsx`).
 - Nada de snapshots: se rompen solos y no dicen qué falla.
@@ -96,7 +102,8 @@ pnpm --filter frontend build
 
 - ❌ `fetch` dentro de un componente (usa un hook + TanStack Query).
 - ❌ Guardar tokens o secretos en `localStorage`.
-- ❌ Escribir a mano los tipos de la API en vez de generarlos (cuando T1 exista).
+- ❌ Escribir a mano los tipos de la API en vez de generarlos (cuando C1 añada
+  `pnpm gen:types`).
 - ❌ Añadir un router, un estado global (Redux/Zustand) o una librería de UI sin
   PR y justificación.
 - ❌ Cambiar `vite.config.ts` (proxy, `envDir`) sin avisar: afecta a todo el
