@@ -81,9 +81,13 @@ describe('VonageVideoService', () => {
 
         await service.generateToken('vonage-123', role);
 
-        const [, options] = vi.mocked(client.generateClientToken).mock.calls[0];
-        expect(options.role).toBe('publisher');
-        expect(JSON.parse(options.data)).toEqual({ role });
+        expect(client.generateClientToken).toHaveBeenCalledWith(
+          'vonage-123',
+          expect.objectContaining({
+            role: 'publisher',
+            data: JSON.stringify({ role }),
+          }),
+        );
       },
     );
 
@@ -126,5 +130,16 @@ describe('createVonageVideoService', () => {
     await expect(
       service.generateToken('vonage-123', 'TENANT'),
     ).rejects.toThrow(/credenciales de vonage video no configuradas/i);
+  });
+
+  it('CA-05b · si VONAGE_PRIVATE_KEY_PATH apunta a un archivo que no existe, el error lo dice claro', async () => {
+    const service = createVonageVideoService({
+      applicationId: 'app-id-test',
+      privateKeyPath: './no-existe/private.key',
+    });
+
+    await expect(service.createSession('visit_demo')).rejects.toThrow(
+      /no se encuentra el private\.key/i,
+    );
   });
 });
