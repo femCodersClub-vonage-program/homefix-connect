@@ -2,13 +2,20 @@
 
 > **Issue:** [#18](https://github.com/femCodersClub-vonage-program/homefix-connect/issues/18)
 > **Rama:** `feat/C2-incident-detail`
-> **Fecha:** 2026-11-16 · **Entorno:** local (macOS), Node v20.19.0, pnpm 12.18.0.
+> **Fecha:** 2026-11-16 · actualizada 2026-11-17 · **Entorno:** local (macOS),
+> Node v24.22.3, pnpm 12.18.0.
 
 ---
 
 ## 1. Comandos y resultados
 
 ```text
+$ nvm use 24
+→ Now using node v24.22.3
+
+$ pnpm install --frozen-lockfile
+→ Lockfile is up to date · Done in 152ms
+
 $ pnpm --filter frontend test
 → Test Files  2 passed (2)
 → Tests       12 passed (12)
@@ -20,7 +27,7 @@ $ pnpm check
 → tsc --noEmit OK (backend + frontend)
 
 $ pnpm test
-→ backend:  Test Files 2 passed (2) · Tests 16 passed (16)
+→ backend:  Test Files 4 passed (4) · Tests 39 passed (39)
 → frontend: Test Files 2 passed (2) · Tests 12 passed (12)
 
 $ pnpm build
@@ -29,7 +36,7 @@ $ pnpm build
    dist/index.html                 0.40 kB │ gzip:  0.27 kB
    dist/assets/index-*.css         0.75 kB │ gzip:  0.43 kB
    dist/assets/index-*.js        259.09 kB │ gzip: 80.49 kB
-   built in 617ms
+   built in 551ms
 ```
 
 ### Incidencia durante la fase verde
@@ -38,7 +45,7 @@ Los tests encontraron varios `h1` con el mismo texto porque el DOM se acumulaba
 entre casos: Vitest no tiene `test.globals` activo y el auto-cleanup de Testing
 Library no se registra. Se añadió `afterEach(cleanup)` en
 `frontend/src/test/setup.ts`; la suite pasó de `3 failed | 9 passed` a
-`12 passed`.
+`12 passed`. La validación completa se repitió con Node 24 (resultados de §1).
 
 ---
 
@@ -90,6 +97,7 @@ Library no se registra. Se añadió `afterEach(cleanup)` en
 - Sin cambios en `backend/openapi.yaml` ni `backend/prisma/schema.prisma`.
 - Sin dependencias nuevas (`fireEvent` en vez de `user-event`).
 - Sin secretos, tokens ni teléfonos reales en código, tests ni fixtures.
+- Revalidado con **Node 24** (`.nvmrc`); el CI usa `node-version-file: .nvmrc`.
 
 ---
 
@@ -97,5 +105,5 @@ Library no se registra. Se añadió `afterEach(cleanup)` en
 
 - Demo manual `?incidentId=inc_demo` con backend + seed: **pendiente**, el
   daemon de Docker no estaba arrancado en el entorno local.
-- Reconciliar `IncidentDetailData` con los tipos generados al cerrar **T1/C1**.
+- Reconciliar `IncidentDetailData` con los tipos generados en **C1** (T1 ya cerrado).
 - Cablear el `onClick` del botón con el token de vídeo (**C3/C4**).
