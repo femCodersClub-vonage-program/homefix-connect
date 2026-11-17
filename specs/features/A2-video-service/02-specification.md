@@ -90,6 +90,7 @@ generateToken(sessionId: string, role: Role): Promise<{ token: string; expiresAt
   - `class VonageVideoService implements VideoService`, constructor `({ client, ttlSeconds = 3600, now = () => Date.now() })`.
   - `createVonageVideoService(env)`: si hay credenciales, crea `new Vonage(new Auth({ applicationId, privateKey: path }))` y pasa `vonage.video` como cliente; si no, un cliente que lanza el error de RF-06.
 - `src/app.ts`: `deps.videoService ?? createVonageVideoService(env)`.
+- `mediaMode`: en `@vonage/video` (v1.32) `MediaMode.RELAYED` vale `'enabled'` y **el valor por defecto es `ROUTED`**, así que hay que pasarlo explícitamente. `@vonage/server-sdk` no reexporta el enum: se usa el literal `'enabled'` con un comentario, o se añade `@vonage/video` como dependencia.
 - `generateClientToken` del SDK es **síncrono** (devuelve string); el service lo envuelve en la `Promise` de la interface.
 
 ## 10. Pregunta abierta clave — Q1: ¿quién guarda el `vonageSessionId`?
