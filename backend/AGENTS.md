@@ -29,11 +29,11 @@ backend/
 │   │   ├── client.ts         # instancia única de PrismaClient
 │   │   └── seed.ts           # datos de demo (IDs fijos)
 │   ├── services/             # X1: contratos + stubs en memoria
-│   │   ├── video.service.ts       # VideoService (A1/A2)
+│   │   ├── video.service.ts       # VideoService (A2)
 │   │   └── messaging.service.ts   # MessagingService (B1/B2)
 │   ├── repositories/         # X1: acceso a datos + stubs en memoria
 │   │   ├── incident.repo.ts       # IncidentRepo
-│   │   └── video-session.repo.ts  # VideoSessionRepo (A1/A3/A4)
+│   │   └── video-session.repo.ts  # VideoSessionRepo (A2/A3/A4)
 │   └── routes/               # un archivo por recurso
 │       ├── health.ts         # GET /api/health
 │       └── incidents.ts      # GET /api/incidents/:id  (provisional, ver T1)
@@ -41,7 +41,7 @@ backend/
 ```
 
 `services/` y `repositories/` contienen las interfaces y stubs creados en X1; las
-implementaciones reales llegan con A1/A2/A3/A4 y B1/B2/B3. `webhooks/` se crea
+implementaciones reales llegan con A2/A3/A4 y B1/B2/B3. `webhooks/` se crea
 cuando una tarea lo necesite: no la añadas vacía.
 
 ## 3. Reglas de capas
