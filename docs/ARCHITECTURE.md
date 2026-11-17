@@ -145,8 +145,9 @@ sequenceDiagram
 - **Decisión:** `backend/openapi.yaml` es la fuente de verdad del contrato; el
   frontend consume tipos generados (`pnpm gen:types`, tarea **C1**) y no escribe
   interfaces a mano.
-- **Consecuencias:** un cambio de contrato es visible y revisable. Mientras T1 no
-  exista, `frontend/src/api/http.ts` es un cliente **provisional**.
+- **Consecuencias:** un cambio de contrato es visible y revisable. T1 ya define
+  el contrato; el frontend consume los tipos generados en
+  `frontend/src/api/generated/` y `client.ts` es solo el transporte `fetch`.
 
 ### ADR-007 — Autenticación simulada por cabeceras
 
@@ -210,6 +211,19 @@ sequenceDiagram
   persiste el estado en `Notification`.
 - **Consecuencias:** menos piezas y menos fallos. Si Vonage tarda o falla, la
   petición tarda o registra `FAILED`; no hay reintento automático (ver §7).
+
+### ADR-013 — Tipos de API generados con openapi-typescript
+
+- **Contexto:** OpenAPI es la frontera entre capas (ADR-006), pero el frontend
+  escribía los tipos a mano y se desincronizaban del contrato.
+- **Decisión:** `openapi-typescript` como devDependency de la raíz; comando
+  `pnpm gen:types`; salida commiteada en `frontend/src/api/generated/` y sin
+  cliente runtime generado. `frontend/src/api/client.ts` sigue siendo un
+  transporte `fetch` fino.
+- **Consecuencias:** una sola fuente de verdad y menos retrabajo en C3-C5. A
+  cambio, hay que regenerar y commitear al cambiar el contrato, y el archivo
+  generado añade ruido al diff. Se descartan `openapi-fetch`/`orval` por
+  KISS/YAGNI.
 
 ---
 

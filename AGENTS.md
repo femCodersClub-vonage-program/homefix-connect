@@ -88,15 +88,17 @@ se añaden sin un ADR aprobado.
 | `pnpm --filter backend test` | Solo tests del backend |
 | `pnpm --filter frontend test` | Solo tests del frontend |
 | `pnpm build` | Compila backend y frontend |
+| `pnpm gen:types` | Genera tipos del frontend desde `backend/openapi.yaml` |
 | `pnpm db:up` / `pnpm db:down` | Arranca / para Postgres (conserva datos) |
 | `pnpm db:push` | Sincroniza tablas con `schema.prisma` (sin migraciones) |
 | `pnpm db:seed` | Datos de demo (idempotente) |
 | `pnpm db:studio` | Explorador web de la base de datos |
 | `pnpm db:reset` | ⚠️ Borra el volumen y recrea + siembra |
 
-> `pnpm gen:types` **todavía no existe**: lo añade la tarea **C1** al generar
-> el cliente desde `backend/openapi.yaml` (T1 solo fija el contrato). Hasta
-> entonces el frontend usa `frontend/src/api/http.ts`.
+> `pnpm gen:types` genera los tipos del frontend en
+> `frontend/src/api/generated/openapi.d.ts` desde `backend/openapi.yaml`.
+> El archivo generado se commitea y no se edita a mano; el transporte HTTP
+> fino vive en `frontend/src/api/client.ts`.
 
 Todo el detalle (qué deberías ver, cómo apagar, errores comunes) está en
 [`docs/LOCAL_SETUP.md`](./docs/LOCAL_SETUP.md).
