@@ -34,14 +34,14 @@ Según la documentación oficial de la Messages API (developer.vonage.com/en/mes
 - El envío es `vonage.messages.send({ messageType: 'sms', channel: 'sms', to, from, text })` y la respuesta trae `messageUUID`.
 - La Messages API admite **JWT** (`applicationId` + `privateKey`, las mismas credenciales que A2) o **Basic** (`apiKey` + `apiSecret`). Vonage recomienda JWT; con JWT los recibos de entrega van al webhook de la aplicación y con Basic al de la cuenta.
 - El SDK de A2 (`@vonage/server-sdk`) ya incluye `messages`. Ese paquete entra con el PR de A2 (#40), que aún no está mergeado.
-- ⚠️ **Por confirmar:** creo que la Messages API pide el número en E.164 **sin** el `+` inicial. Hay que comprobarlo en la referencia de la API o en la prueba real antes de fijarlo.
+- ✅ **Formato del número (confirmado en la referencia de la API y en el soporte de Vonage):** E.164 **sin** `+` ni `00`, empezando por el código de país (p. ej. `447700900000`). Como `User.phone` del seed va con `+` (`+34600000001`), el wrapper valida E.164 con `+` y quita el `+` antes de llamar a Vonage.
 
 ## 3. Desconocidos (preguntas para el issue)
 
 | #  | Pregunta | Opciones | Recomendación |
 | -- | -------- | -------- | ------------- |
 | Q1 | Autenticación | A) JWT con `VONAGE_APPLICATION_ID` + `private.key` (como A2) · B) Basic con `VONAGE_API_KEY` / `VONAGE_API_SECRET` | **A**: reutiliza las credenciales de A2 y es lo que recomienda Vonage. Requiere activar *Messages* en la aplicación de Vonage |
-| Q2 | ¿El wrapper valida `to` antes de llamar a Vonage? | A) Sí: E.164 (`^\+[1-9]\d{6,14}$`) → `VonageValidationError` sin llamar al SDK · B) No: lo valida Vonage | **A**: error claro y test sin red. El wrapper adapta el formato que pida Vonage (ver hallazgo ⚠️) |
+| Q2 | ¿El wrapper valida `to` antes de llamar a Vonage? | A) Sí: E.164 (`^\+[1-9]\d{6,14}$`) → `VonageValidationError` sin llamar al SDK · B) No: lo valida Vonage | **A**: error claro y test sin red. El wrapper quita el `+` antes de llamar a Vonage (ver hallazgo ✅) |
 | Q3 | Mock en los tests | A) Inyectar el cliente del SDK y mockearlo con Vitest (como A2) · B) `nock` / `msw` (lo que dice el issue) | **A**: no añade dependencias nuevas (AGENTS.md §12 prohíbe añadirlas sin PR aprobado) |
 | Q4 | Mapeo de errores | 401/403 → `VonageAuthError` · 400/422 → `VonageValidationError` · 429, 5xx, timeout, sin red → `VonageNetworkError` | Confirmar. 429 va con *network* porque es reintentable (B3) |
 | Q5 | Falta `VONAGE_MESSAGES_FROM` o credenciales | A) Fallar al arrancar · B) La app arranca y `sendSms` lanza `VonageAuthError` | **B**, igual que A2 |
