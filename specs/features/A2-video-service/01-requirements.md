@@ -40,7 +40,7 @@ Según la documentación oficial del Vonage Video Node SDK (developer.vonage.com
 
 | #  | Pregunta | Opciones | Recomendación |
 | -- | -------- | -------- | ------------- |
-| Q1 | ¿Quién persiste el `vonageSessionId`: el service o la ruta? Hoy A3 (#36) ya hace `createSession` + `VideoSessionRepo.update` con el guard de concurrencia en la ruta | A) El service persiste y es idempotente (como dice el issue) y A3 deja de hacer el `update` y el guard se mueve al service · B) El service solo llama a Vonage y la ruta persiste (como está A3) | **A**, para cumplir el criterio del issue y tener la idempotencia en un único sitio. Implica un pequeño ajuste en A3 cuando se mergee A2 |
+| Q1 | ¿Quién persiste el `vonageSessionId`: el service o la ruta? Hoy A3 (#36) ya hace `createSession` + `VideoSessionRepo.update` con el guard de concurrencia en la ruta | A) El service persiste y es idempotente (como dice el issue) y A3 deja de hacer el `update` y el guard se mueve al service · B) El service solo llama a Vonage y la ruta persiste (como está A3) | **A**, para cumplir el criterio del issue y tener la idempotencia en un único sitio. Implica un pequeño ajuste en A3 cuando se mergee A2. **✅ Decidido (reunión 17/11): B**: A3 ya está mergeado y cubre la idempotencia (CA-09) |
 | Q2 | TTL del token | 3600 s (recomendado en el issue) | **3600 s** |
 | Q3 | Si falta `VONAGE_APPLICATION_ID` o el `private.key` | A) Fallar al arrancar · B) 500 en la petición | **B**: `.env.example` dice que la app arranca sin credenciales y A3 ya documenta el 500 |
 | Q4 | Rol de Vonage para `TENANT` y `TECHNICIAN` | `publisher` para las dos · `moderator` para la técnica | **`publisher` para las dos** (llamada 1-a-1, nadie expulsa a nadie) |

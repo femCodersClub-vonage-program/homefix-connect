@@ -48,7 +48,8 @@ Sin cambios en `video.service.ts` (interface X1), `openapi.yaml` ni `schema.pris
 
 ## 5. Pendiente de la reunión
 
-- Confirmar **Q1** (A o B) y **Q5** ("conexión forzada").
+- ~~Confirmar **Q1** (A o B)~~ ✅ **B** (reunión 17/11).
+- Confirmar **Q5** ("conexión forzada").
 - Pedir `VONAGE_APPLICATION_ID` y `private.key` para la prueba manual.
 
 ## 6. Si se elige la opción A en Q1

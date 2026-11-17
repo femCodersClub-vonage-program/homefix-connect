@@ -42,7 +42,7 @@ Implementación real de la interface `VideoService` con el Server SDK de Vonage.
 - **RN-01:** Rol de Vonage `publisher` para `TENANT` y `TECHNICIAN` (llamada 1-a-1, nadie modera). `MANAGER` nunca llega aquí: A3 lo corta con 403. Si llegara, el service lanza error.
 - **RN-02:** `mediaMode: relayed` (P2P, ARCHITECTURE "media P2P").
 - **RN-03:** La clave privada nunca sale del backend ni aparece en logs (AGENTS.md §6).
-- **RN-04:** Una `VideoSession` tiene como máximo una sesión de Vonage. **Quién lo garantiza depende de Q1** (ver §10).
+- **RN-04:** Una `VideoSession` tiene como máximo una sesión de Vonage. Lo garantiza **A3** (ruta `POST /video-tokens` con su guard de concurrencia, CA-09), según la decisión de Q1 = B (ver §10).
 
 ## 5. Contrato (interface X1, sin cambios)
 
@@ -95,7 +95,9 @@ generateToken(sessionId: string, role: Role): Promise<{ token: string; expiresAt
 - `mediaMode`: en `@vonage/video` (v1.32) `MediaMode.RELAYED` vale `'enabled'` y **el valor por defecto es `ROUTED`**, así que hay que pasarlo explícitamente. `@vonage/server-sdk` no reexporta el enum: se usa el literal `'enabled'` con un comentario, o se añade `@vonage/video` como dependencia.
 - `generateClientToken` del SDK es **síncrono** (devuelve string); el service lo envuelve en la `Promise` de la interface.
 
-## 10. Pregunta abierta clave — Q1: ¿quién guarda el `vonageSessionId`?
+## 10. Q1: ¿quién guarda el `vonageSessionId`? — ✅ Decidido: B
+
+> **Decisión (reunión 17/11): opción B.** El service solo habla con Vonage; A3 sigue guardando el `vonageSessionId` con su guard. Hay que actualizar el criterio del issue #8 («`createSession` persiste e idempotente»).
 
 El issue dice que lo guarda el service y que es idempotente. Pero **A3 (#36) ya está en `main`** y la ruta ya hace `createSession` + `VideoSessionRepo.update` con el guard de concurrencia (test CA-09).
 
