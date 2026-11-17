@@ -81,7 +81,7 @@ describe('VonageVideoService', () => {
 
         await service.generateToken('vonage-123', role);
 
-        const [, options] = client.generateClientToken.mock.calls[0];
+        const [, options] = vi.mocked(client.generateClientToken).mock.calls[0];
         expect(options.role).toBe('publisher');
         expect(JSON.parse(options.data)).toEqual({ role });
       },
