@@ -57,6 +57,7 @@ generateToken(sessionId: string, role: Role): Promise<{ token: string; expiresAt
 | --- | --- |
 | Falta `VONAGE_APPLICATION_ID` o `VONAGE_PRIVATE_KEY_PATH` | Lanza `Error('Credenciales de Vonage Video no configuradas')` al llamar → la ruta responde 500 |
 | El SDK falla (red, credenciales inválidas) | Se propaga el error (sin la clave en el mensaje) → 500 |
+| `VONAGE_PRIVATE_KEY_PATH` apunta a un archivo que no existe | Lanza `Error('No se encuentra el private.key de Vonage Video en <ruta>')` al llamar → 500. Sin esta comprobación el SDK usaría el texto de la ruta como clave y fallaría más tarde con un error confuso |
 | `role` no es `TENANT` ni `TECHNICIAN` | Lanza error → 500 (no debería pasar por A3) |
 
 ## 7. Casos límite
@@ -80,6 +81,7 @@ generateToken(sessionId: string, role: Role): Promise<{ token: string; expiresAt
 **CA-03 · Rol de Vonage** → `TENANT` y `TECHNICIAN` → `role: 'publisher'`; `data` incluye el rol
 **CA-04 · Rol no permitido** → `MANAGER` → lanza error, no llama al SDK
 **CA-05 · Sin credenciales** → service creado sin `applicationId` → `createSession` y `generateToken` lanzan error claro
+**CA-05b · Ruta del private.key incorrecta** → `VONAGE_PRIVATE_KEY_PATH` apunta a un archivo inexistente → error que nombra la ruta buscada
 **CA-06 · Error del SDK** → el cliente rechaza → el error se propaga
 **CA-07 · Integración con A3** → `video-tokens.test.ts` sigue en verde sin cambios (usa stubs)
 

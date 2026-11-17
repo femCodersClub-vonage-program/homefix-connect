@@ -1,3 +1,6 @@
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import type { Role } from '@prisma/client';
 import { Vonage } from '@vonage/server-sdk';
 
@@ -103,8 +106,16 @@ export function createVonageVideoService(
       throw new Error(MISSING_CREDENTIALS);
     }
     if (!sdkClient) {
-      const video = new Vonage({ applicationId, privateKey: privateKeyPath })
-        .video;
+      // Ojo: si la ruta no existe, el SDK usa el TEXTO de la ruta como clave y el
+      // error sale después, al firmar, y es confuso. Por eso lo comprobamos antes.
+      // La ruta relativa se resuelve desde donde corre el backend (backend/ con pnpm dev).
+      const keyPath = resolve(privateKeyPath);
+      if (!existsSync(keyPath)) {
+        throw new Error(
+          `No se encuentra el private.key de Vonage Video en ${keyPath}`,
+        );
+      }
+      const video = new Vonage({ applicationId, privateKey: keyPath }).video;
       type SdkSessionOptions = Parameters<typeof video.createSession>[0];
       sdkClient = {
         createSession: (options) =>
