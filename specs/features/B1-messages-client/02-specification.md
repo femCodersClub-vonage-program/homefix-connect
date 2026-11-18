@@ -80,13 +80,42 @@ class VonageMessagesClient implements MessagingService {
 
 <!-- Tabla: caso → error lanzado (Q4: auth / validación / network). -->
 
+| Caso                                              | Error que lanza `sendSms`           |
+| ------------------------------------------------- | ----------------------------------- |
+| Número `to` que no es E.164 (sin llamar a Vonage) | `VonageValidationError`             |
+| Vonage responde 401 o 403                         | `VonageAuthError`                   |
+| Vonage responde 400 o 422                         | `VonageValidationError`             |
+| Vonage responde 429 o 5xx                         | `VonageNetworkError`                |
+| Fallo de red o timeout                            | `VonageNetworkError`                |
+| Faltan credenciales                               | `VonageAuthError` (⏳ pendiente Q5) |
+
 ## 7. Casos límite
 
 <!-- Sin credenciales (Q5), número inválido, timeout, 429... -->
 
+| Caso                                         | Qué pasa                                                         |
+| -------------------------------------------- | ---------------------------------------------------------------- |
+| `to` sin `+` (p. ej. `34600000001`)          | `VonageValidationError` (no cumple la regex de Q2)               |
+| `to` con espacios (p. ej. `+34 600 000 001`) | `VonageValidationError` (no cumple la regex de Q2)               |
+| `body` vacío                                 | `VonageValidationError` sin llamar a Vonage ⏳                   |
+| `body` de más de 160 caracteres              | Se envía igual; Vonage lo parte en varios SMS ⏳ (por verificar) |
+| Falta `VONAGE_MESSAGES_FROM`                 | `VonageAuthError` (Q5)                                           |
+| Vonage responde OK pero sin `message_uuid`   | `VonageNetworkError` ⏳                                          |
+
 ## 8. Criterios de aceptación
 
 <!-- Lista verificable, idealmente Dado / Cuando / Entonces. -->
+
+- [ ] **CA-1 · Envío correcto:** Dado un `to` E.164 válido y un `body`, cuando llamo a `sendSms`, entonces el SDK recibe el número **sin `+`**, el remitente de `VONAGE_MESSAGES_FROM`, y devuelve `{ providerMessageId }` igual al `message_uuid`.
+- [ ] **CA-2 · Número inválido:** Dado un `to` que no cumple E.164 (sin `+`, con espacios…), cuando llamo a `sendSms`, entonces lanza `VonageValidationError` y **no** se llama al SDK.
+- [ ] **CA-3 · Body vacío:** Dado un `body` vacío, cuando llamo a `sendSms`, entonces lanza `VonageValidationError` y **no** se llama al SDK.
+- [ ] **CA-4 · Auth:** Dado que Vonage responde 401 o 403, entonces lanza `VonageAuthError`.
+- [ ] **CA-5 · Validación Vonage:** Dado que Vonage responde 400 o 422, entonces lanza `VonageValidationError`.
+- [ ] **CA-6 · Red:** Dado que Vonage responde 429, 5xx, hay timeout o error de red, entonces lanza `VonageNetworkError`.
+- [ ] **CA-7 · Sin credenciales:** Dado que faltan credenciales o `VONAGE_MESSAGES_FROM`, la app arranca y `sendSms` lanza `VonageAuthError`.
+- [ ] **CA-8 · Logs:** Los logs no incluyen el `body` completo y el teléfono aparece enmascarado.
+- [ ] **CA-9 · Tests:** Los tests usan el cliente del SDK mockeado y no llaman a Vonage real.
+- [ ] **CA-10 · Calidad:** `pnpm check` y `pnpm test` pasan sin errores.
 
 ## 9. Diseño técnico
 
