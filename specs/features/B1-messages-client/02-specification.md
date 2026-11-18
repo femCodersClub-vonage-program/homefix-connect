@@ -36,19 +36,45 @@ Para programarla hace falta el SDK `@vonage/server-sdk`, que llega con el #40 (A
 
 <!-- RF-1, RF-2... a partir de los explícitos y derivados del 01. -->
 
-| ID   | Requisito                                                                                                          | Fuente                          |
-| ---- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------- |
-| E-01 | `src/services/messaging.service.ts` exporta `VonageMessagesClient` con `sendSms(to, body) → { providerMessageId }` | Issue #12                       |
-| E-02 | El remitente sale de `VONAGE_MESSAGES_FROM`                                                                        | Issue #12 · `.env.example`      |
-| D-01 | `VonageMessagesClient` cumple la interface `MessagingService` de X1                                                | Misma firma `sendSms(to, body)` |
+| ID    | Requisito                                                                                                          | Fuente                                 |
+| ----- | ------------------------------------------------------------------------------------------------------------------ | -------------------------------------- |
+| RF-1  | `src/services/messaging.service.ts` exporta `VonageMessagesClient` con `sendSms(to, body) → { providerMessageId }` | E-01 · Issue #12                       |
+| RF-2  | El remitente sale de `VONAGE_MESSAGES_FROM`                                                                        | E-02 · Issue #12 · `.env.example`      |
+| RF-3  | `VonageMessagesClient` cumple la interface `MessagingService` de X1                                                | D-01 · X1                              |
+| RF-4  | Errores tipados: `VonageAuthError`, `VonageNetworkError`, `VonageValidationError`                                  | E-03 · Issue #12                       |
+| RF-5  | Test unitario que **no** llama a Vonage real                                                                       | E-04 · Issue #12                       |
+| RF-6  | Loguea request/response sin el body completo del SMS                                                               | E-05 · Issue #12 · `backend/AGENTS.md` |
+| RF-7  | `providerMessageId` = `message_uuid` de la respuesta de Vonage                                                     | E-06 · Issue #12                       |
+| RF-8  | El cliente del SDK se inyecta en el constructor para mockearlo en tests                                            | D-02 · `AGENTS.md`                     |
+| RF-9  | Sin credenciales la app arranca; `sendSms` falla con error claro                                                   | D-03 · `.env.example` · Q5             |
+| RF-10 | En los logs el teléfono va enmascarado (p. ej. `+34*****001`)                                                      | D-04 · `AGENTS.md` §9.1                |
+| RF-11 | El service no importa `express` ni sabe de HTTP                                                                    | D-05 · `backend/AGENTS.md`             |
 
 ## 4. Reglas de negocio
 
 <!-- E.164 con + en la entrada, sin + hacia Vonage; credenciales; etc. -->
 
+- **Número de destino:** se recibe en formato E.164 con `+` y se envía a Vonage sin el `+` (el wrapper lo quita).
+- **Remitente:** sale siempre de `VONAGE_MESSAGES_FROM`.
+- **Autenticación:** JWT con `VONAGE_APPLICATION_ID` + `private.key` (⏳ pendiente Q1).
+- **Privacidad en logs:** no se loguea el body completo del SMS y el teléfono va enmascarado (p. ej. `+34*****001`).
+
 ## 5. Contrato (firma pública del wrapper)
 
 <!-- Firma de sendSms (parámetros y lo que devuelve). -->
+
+```ts
+class VonageMessagesClient implements MessagingService {
+  constructor(client: VonageClient, from: string);
+  sendSms(to: string, body: string): Promise<{ providerMessageId: string }>;
+}
+```
+
+> ⚠️ Pendiente de verificar en el SDK (cuando #40 esté en `main`): el nombre exacto del tipo del cliente (`VonageClient`).
+
+- `to`: número en formato E.164 con `+`.
+- `body`: contenido del SMS.
+- Devuelve `providerMessageId`, que es el `message_uuid` de la respuesta.
 
 ## 6. Manejo de errores
 
