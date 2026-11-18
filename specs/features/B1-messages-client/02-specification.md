@@ -121,6 +121,17 @@ class VonageMessagesClient implements MessagingService {
 
 <!-- Archivo(s), cómo se inyecta el cliente (Q3), dónde se leen las credenciales. -->
 
+- `src/services/messaging.service.ts`:
+  - Tipo mínimo `VonageMessagesSdk = { send(msg): Promise<{ messageUUID: string }> }` (lo que usamos del SDK; fácil de mockear).
+  - `class VonageMessagesClient implements MessagingService`, constructor `({ client, from })`.
+  - `sendSms`: valida `to` (regex de Q2) y `body`, quita el `+`, llama a `client.send(...)` con `channel: 'sms'`, mapea errores (apartado 6) y devuelve `{ providerMessageId }`.
+  - `createVonageMessagesClient(env)`: si hay credenciales y `VONAGE_MESSAGES_FROM`, crea el cliente real del SDK con `VONAGE_APPLICATION_ID` + `VONAGE_PRIVATE_KEY_PATH`; si no, un cliente que lanza `VonageAuthError` (Q5).
+- Errores (`VonageAuthError`, `VonageValidationError`, `VonageNetworkError`): en el mismo archivo o en `src/lib/vonage-errors.ts` ⏳ (a decidir en el plan).
+- Credenciales: se leen de `src/config/env.ts` (ya existen, opcionales).
+- **No** se toca `src/app.ts` (Q6).
+
+> ⚠️ Por verificar en el SDK cuando #40 esté en `main`: el nombre del método (`send`), el formato del mensaje SMS y el campo de la respuesta (`messageUUID`).
+
 ## 10. Decisiones (Q1–Q7)
 
 <!-- Cada Q con estado: ✅ decidido / ⏳ pendiente de respuesta en el #12. -->
@@ -137,6 +148,18 @@ class VonageMessagesClient implements MessagingService {
 
 <!-- Unit con Vitest + cliente mockeado; qué casos se prueban. -->
 
+- **Unit (Vitest)** en `src/__tests__/`, con el cliente del SDK mockeado e inyectado en el constructor (Q3). Sin red y sin dependencias nuevas.
+- Un test por criterio de aceptación: CA-1 a CA-8 (apartado 8).
+- Se comprueba también que en los casos de validación (CA-2, CA-3) **no** se llama al mock del SDK.
+- Prueba manual opcional contra Vonage real con la app `homefix-connect-dev`, si se activa _Messages_ y el saldo permite enviar SMS a números españoles ⏳.
+- Antes del PR: `pnpm check` + `pnpm test` en verde.
+
 ## 12. Dependencias
 
 <!-- #40 (A2) en main por el SDK; activar Messages en la app de Vonage. -->
+
+- **#40 (A2) en `main`**: trae el SDK `@vonage/server-sdk`. El código de la B1 espera a ese merge (Q7).
+- **Respuestas Q1–Q7 en el #12**: hay que confirmarlas antes de pasar la spec a aprobada.
+- **Activar _Messages_** en la aplicación de Vonage (solo si Q1 = JWT y para la prueba manual).
+- **T1 y T2** (contrato OpenAPI y Prisma): ya en `main` ✅.
+- **Bloquea a:** B2 (`MessagingService.sendSms` + plantilla).
