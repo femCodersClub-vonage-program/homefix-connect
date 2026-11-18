@@ -14,10 +14,6 @@ export type GetJsonOptions = {
   headers?: Record<string, string>;
 };
 
-/**
- * Cliente HTTP provisional.
- * El cliente definitivo se genera desde `backend/openapi.yaml` en C1.
- */
 export async function getJson<T>(
   path: string,
   options: GetJsonOptions = {},

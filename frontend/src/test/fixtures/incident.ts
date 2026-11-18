@@ -8,8 +8,13 @@ export function makeIncidentFixture(
     title: 'Fuga de agua en el baño',
     description: 'La tubería pierde bajo el lavabo.',
     status: 'VISIT_ASSIGNED',
-    technician: { name: 'Técnica Demo' },
-    visit: { scheduledAt: '2026-11-17T10:00:00.000Z', status: 'CONFIRMED' },
+    technician: { id: 'usr_technician_demo', name: 'Técnica Demo' },
+    visit: {
+      id: 'visit_demo',
+      scheduledAt: '2026-11-17T10:00:00.000Z',
+      status: 'CONFIRMED',
+      videoSession: { id: 'vs_demo', status: 'PENDING' },
+    },
     ...overrides,
   };
 }
