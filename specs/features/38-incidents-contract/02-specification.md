@@ -29,7 +29,7 @@ El objetivo es que la ruta devuelva solo los campos del schema `Incident`, sin c
 - **RF-3:** `visit` se devuelve como `null` o `{ id, status, scheduledAt, videoSession }`.
 - **RF-4:** `visit.videoSession` se devuelve como `null` o `{ id, status }`.
 - **RF-5:** No se devuelven nunca: `tenant`, `manager`, `tenantId`, `technicianId`, `managerId`, `createdAt`, `updatedAt`, `phone`, `email`, `vonageSessionId`.
-- **RF-6:** Si la incidencia no existe → 404 (cuerpo ⏳ Q2).
+- **RF-6:** Si la incidencia no existe → 404 con el cuerpo actual `{ error: 'Incident not found', id }` (Q2: se mantiene, como pide el issue).
 
 ## 4. Contrato de entrada
 
@@ -62,7 +62,7 @@ Ejemplo de respuesta correcta:
 
 | Caso                    | Código | Cuerpo                                                                  |
 | ----------------------- | ------ | ----------------------------------------------------------------------- |
-| La incidencia no existe | 404    | `{ "error": "Incident not found" }` (⏳ Q2: ¿se mantiene también `id`?) |
+| La incidencia no existe | 404 | `{ "error": "Incident not found", "id": "<id>" }` (se mantiene el actual, Q2) |
 
 ## 7. Casos límite
 
@@ -77,35 +77,40 @@ Ejemplo de respuesta correcta:
 - **CA-1:** Dado una incidencia con técnico, visita y videosesión, cuando se pide `GET /api/incidents/:id`, entonces responde 200 solo con `id`, `title`, `description`, `status`, `technician { id, name }` y `visit { id, status, scheduledAt, videoSession { id, status } }`.
 - **CA-2:** Dado una incidencia cualquiera, cuando se pide, entonces la respuesta no contiene `tenant`, `manager`, `phone`, `email`, `tenantId`, `technicianId`, `managerId`, `createdAt`, `updatedAt` ni `vonageSessionId`.
 - **CA-3:** Dado una incidencia sin técnico ni visita, cuando se pide, entonces `technician` y `visit` son `null`.
-- **CA-4:** Dado un `id` que no existe, cuando se pide, entonces responde 404 con `{ error: 'Incident not found' }` (⏳ Q2).
+- **CA-4:** Dado un `id` que no existe, cuando se pide, entonces responde 404 con `{ error: 'Incident not found', id }` (sin cambios).
 - **CA-5:** Hay test de la ruta que comprueba CA-1 a CA-4.
 
 ## 9. Diseño técnico
 
-⏳ Depende de Q1.
+Opción A, la que propone el issue (Q1).
 
-- **Opción A:** en `backend/src/routes/incidents.ts`, cambiar el `include` por un `select` de Prisma que pida solo los campos del contrato. No se toca nada más.
-- **Opción B (propuesta):**
-  - Convertir `incidentsRouter` en `createIncidentsRouter({ incidentRepo })`, igual que `createVideoTokensRouter` (A3), y pasarle el `incidentRepo` que ya existe en `createApp` (`backend/src/app.ts`).
-  - La ruta usa `incidentRepo.findById(id)` en lugar de `prisma` directamente.
-  - Nueva función `toIncidentDto(incident)` que convierte `IncidentWithRelations` al formato del schema `Incident` (solo los campos del contrato).
+- En `backend/src/routes/incidents.ts`, cambiar el `include` de `prisma.incident.findUnique` por un `select` explícito que pida solo los campos del contrato:
+  - `id`, `title`, `description`, `status`
+  - `technician: { select: { id, name } }`
+  - `visit: { select: { id, status, scheduledAt, videoSession: { select: { id, status } } } }`
+- Las relaciones opcionales que no existen llegan de Prisma como `null`, que es lo que pide el contrato.
+- El 404 no cambia.
+- No se toca nada más (ni `app.ts`, ni repos, ni `openapi.yaml`).
 
 ## 10. Estrategia de pruebas
 
-- **Dónde:** `backend/src/__tests__/` (con la opción B, un test nuevo de la ruta siguiendo el patrón de `video-tokens.test.ts`; se adaptan los 2 tests actuales de `app.test.ts`).
-- **Cómo:** Supertest contra `createApp` con `InMemoryIncidentRepo` y datos tipo seed (opción B) o con `prisma.incident.findUnique` mockeado (opción A).
+- **Dónde:** `backend/src/__tests__/app.test.ts`, bloque `GET /api/incidents/:id` (se amplía).
+- **Cómo:** Supertest contra `createApp` con `prisma.incident.findUnique` mockeado.
 - **Qué comprueban:**
-  - CA-1: la respuesta 200 tiene exactamente las claves del contrato (`Object.keys`), no solo `toMatchObject`.
+  - El `select` que se pasa a Prisma es exactamente el del contrato (`toHaveBeenCalledWith`) y no hay `include`. Así se prueba el filtrado aunque Prisma esté mockeado.
+  - CA-1: la respuesta 200 tiene exactamente las claves del contrato (también dentro de `technician`, `visit` y `videoSession`).
   - CA-2: no aparece ninguno de los campos prohibidos.
   - CA-3: `technician` y `visit` son `null` cuando no existen.
-  - CA-4: 404 con `{ error: 'Incident not found' }`.
+  - CA-4: 404 con `{ error: 'Incident not found', id }`.
 - Antes del PR: `pnpm check` y `pnpm test` en verde.
 
 ## 11. Decisiones (Q1–Q3)
 
-- **Q1 · Cómo filtrar:** ⏳ propuesta: opción B.
-- **Q2 · 404:** ⏳ propuesta: dejar solo `{ error }` como dice el schema `Error`.
-- **Q3 · Comentario de `openapi.yaml`:** ⏳
+Se sigue lo que pide el issue #38 mientras no haya otra respuesta del equipo:
+
+- **Q1 · Cómo filtrar:** ✅ opción A, `select` explícito de Prisma en la ruta (lo que indica el issue).
+- **Q2 · 404:** ✅ se mantiene el 404 actual `{ error, id }` (el issue dice "mantener el 404 actual").
+- **Q3 · Comentario de `openapi.yaml`:** ✅ no se toca en este PR (el issue dice "sin cambios en `openapi.yaml`"); se puede corregir aparte.
 
 ## 12. Dependencias
 

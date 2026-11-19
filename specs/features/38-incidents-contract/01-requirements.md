@@ -56,7 +56,10 @@ Ruta: `backend/src/routes/incidents.ts`. Hace `prisma.incident.findUnique` con `
 
 ## 4. Decisiones de Clarificación Acordadas
 
-- ⏳ Pendiente de respuesta a Q1, Q2 y Q3.
+- Sin respuesta del equipo a 19/11, se sigue lo que pide el issue:
+  - Q1: opción A (`select` de Prisma en la ruta).
+  - Q2: se mantiene el 404 actual `{ error, id }`.
+  - Q3: no se toca `openapi.yaml` en este PR.
 
 ## 5. Fuera de alcance
 
