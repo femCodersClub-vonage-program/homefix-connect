@@ -35,10 +35,10 @@ Sin cambios en `app.ts` (Q6), `openapi.yaml` ni `schema.prisma`. Dependencia nue
 
 1. ✅ #40 en `main` y Q1–Q8 decididas (20/11).
 2. ✅ `main` mergeado en `feat/B1-messages-client`. Añadir la dependencia: `pnpm --filter backend add @vonage/messages@1.28.1`.
-3. ✅ SDK verificado (`send` → `{ messageUUID }`, clase `SMS`). Pendiente: ver dónde trae el SDK el código HTTP en los errores (para Q4).
-4. Crear `vonage-errors.ts` con los 3 errores tipados (`VonageAuthError`, `VonageValidationError`, `VonageNetworkError`).
-5. Fase roja: escribir los tests CA-1 a CA-8.
-6. Fase verde: implementar `VonageMessagesClient` y `createVonageMessagesClient(env)`.
+3. ✅ SDK verificado (`send` → `{ messageUUID }`, clase `SMS`, errores `VetchError` con `error.response.status`).
+4. ✅ Crear `vonage-errors.ts` con los 3 errores tipados (`VonageAuthError`, `VonageValidationError`, `VonageNetworkError`).
+5. ✅ Fase roja (20/11, 20 tests en rojo): escribir los tests CA-1 a CA-8.
+6. ✅ Fase verde (20/11, 24 tests en verde): implementar `VonageMessagesClient` y `createVonageMessagesClient(env)`.
 7. Pasar `pnpm check` y `pnpm test`.
 8. Prueba manual opcional contra Vonage real.
 9. Escribir `04-validation.md` y abrir el PR con `Closes #12`.

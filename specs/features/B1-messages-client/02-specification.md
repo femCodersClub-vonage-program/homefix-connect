@@ -85,8 +85,10 @@ class VonageMessagesClient implements MessagingService {
 | Número `to` que no es E.164 (sin llamar a Vonage) | `VonageValidationError`             |
 | Vonage responde 401 o 403                         | `VonageAuthError`                   |
 | Vonage responde 400 o 422                         | `VonageValidationError`             |
+| Vonage responde otro 4xx (404, 409, 413…)         | `VonageValidationError` (Q4+, 20/11) |
 | Vonage responde 429 o 5xx                         | `VonageNetworkError`                |
 | Fallo de red o timeout                            | `VonageNetworkError`                |
+| Cualquier otro error sin código HTTP              | `VonageNetworkError` (Q4+, 20/11)   |
 | Faltan credenciales o `VONAGE_MESSAGES_FROM`      | `VonageAuthError` (Q5 ✅)           |
 
 ## 7. Casos límite
@@ -131,7 +133,8 @@ class VonageMessagesClient implements MessagingService {
 - **No** se toca `src/app.ts` (Q6).
 
 > ✅ Verificado en el SDK (`@vonage/server-sdk` 3.31.1 / `@vonage/messages` 1.28.1): `messages.send(...)` devuelve `{ messageUUID }` y `@vonage/messages` exporta la clase `SMS`.
-> ⚠️ Por verificar en la fase roja: dónde trae el SDK el código HTTP cuando Vonage responde con error (necesario para el mapeo de Q4).
+> ✅ Verificado (20/11): ante una respuesta de error el SDK lanza `VetchError` (`@vonage/vetch`) con el código HTTP en `error.response.status`. Error de red: sin `response`. Timeout: `AbortError`.
+> El SMS se construye con `new SMS(text, to, from)` (constructor posicional): el de objeto exige pasar también `channel` y `messageType` en los tipos.
 
 ## 10. Decisiones (Q1–Q8)
 
@@ -143,6 +146,7 @@ Decididas el 20/11/2026 y anotadas en el #12.
 - **Q2 · Validar `to`:** el wrapper valida E.164 con `+`, lanza `VonageValidationError` sin llamar a Vonage y quita el `+` antes de enviar. · ✅
 - **Q3 · Mock en tests:** cliente del SDK inyectado y mockeado con Vitest (como en A2); sin nock/msw. · ✅
 - **Q4 · Mapeo de errores:** 401/403 → `VonageAuthError` · 400/422 → `VonageValidationError` · 429, 5xx y errores de red → `VonageNetworkError`. Reintentos → B3. · ✅
+  - **Ampliación (20/11):** resto de 4xx → `VonageValidationError` (la petición está mal, no se reintenta); cualquier error sin código HTTP → `VonageNetworkError`. Así B3 solo ve 3 tipos: auth (no reintentar), validación (no reintentar), red (reintentable). · ✅
 - **Q5 · Sin credenciales:** la app arranca y `sendSms` lanza `VonageAuthError` (también si falta `VONAGE_MESSAGES_FROM`). · ✅
 - **Q6 · Alcance:** B1 solo entrega el cliente; lo conecta en `app.ts` la B2/B3. · ✅
 - **Q7 · Dependencia:** resuelta, #40 (A2) en `main` el 20/11. · ✅

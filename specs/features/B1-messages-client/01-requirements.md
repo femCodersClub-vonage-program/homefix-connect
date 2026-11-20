@@ -58,7 +58,7 @@ Decididas por Carolina (asignada de la B1) el 20/11/2026 y anotadas en el #12.
 | Q1 | ✅ **A · JWT** con `VONAGE_APPLICATION_ID` + `private.key`: la misma aplicación de Vonage que A2 (`homefix-connect-dev`). Hay que activar *Messages* en esa aplicación (sin regenerar la clave) |
 | Q2 | ✅ **A** · El wrapper valida E.164 con `+` (`^\+[1-9]\d{6,14}$`), lanza `VonageValidationError` sin llamar al SDK y quita el `+` antes de enviar |
 | Q3 | ✅ **A** · Cliente del SDK inyectado y mockeado con Vitest; sin nock/msw |
-| Q4 | ✅ 401/403 → `VonageAuthError` · 400/422 → `VonageValidationError` · 429, 5xx, timeout y red → `VonageNetworkError`. Reintentos → B3 |
+| Q4 | ✅ 401/403 → `VonageAuthError` · 400/422 → `VonageValidationError` · 429, 5xx, timeout y red → `VonageNetworkError`. Reintentos → B3. **Ampliación 20/11:** resto de 4xx → `VonageValidationError`; error sin código HTTP → `VonageNetworkError` |
 | Q5 | ✅ **B** · La app arranca; `sendSms` lanza `VonageAuthError` si faltan credenciales o `VONAGE_MESSAGES_FROM` |
 | Q6 | ✅ **B** · B1 solo entrega el cliente; lo conecta B2/B3 |
 | Q7 | ✅ Resuelta: #40 (A2) mergeado en `main` el 20/11 |
