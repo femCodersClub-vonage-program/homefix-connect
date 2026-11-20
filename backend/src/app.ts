@@ -14,10 +14,8 @@ import type { VideoSessionRepo } from './repositories/video-session.repo.js';
 import { healthRouter } from './routes/health.js';
 import { incidentsRouter } from './routes/incidents.js';
 import { createVideoTokensRouter } from './routes/video-tokens.js';
-import {
-  InMemoryVideoService,
-  type VideoService,
-} from './services/video.service.js';
+import type { VideoService } from './services/video.service.js';
+import { createVonageVideoService } from './services/vonage-video.service.js';
 
 // Dependencias opcionales: los tests inyectan stubs; la app real usa los valores por defecto.
 export type AppDeps = {
@@ -31,8 +29,13 @@ export function createApp(deps: AppDeps = {}) {
   const incidentRepo = deps.incidentRepo ?? new PrismaIncidentRepo(prisma);
   const videoSessionRepo =
     deps.videoSessionRepo ?? new PrismaVideoSessionRepo(prisma);
-  // Stub hasta que A2 implemente Vonage Video real.
-  const videoService = deps.videoService ?? new InMemoryVideoService();
+  // Vonage Video real (A2). Sin credenciales arranca igual: solo falla al pedir token (500).
+  const videoService =
+    deps.videoService ??
+    createVonageVideoService({
+      applicationId: env.VONAGE_APPLICATION_ID,
+      privateKeyPath: env.VONAGE_PRIVATE_KEY_PATH,
+    });
   const applicationId = deps.applicationId ?? env.VONAGE_APPLICATION_ID;
 
   const app = express();
