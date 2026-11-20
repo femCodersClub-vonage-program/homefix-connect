@@ -15,17 +15,19 @@ const demoUserIdByRole: Record<UserRole, string> = {
   TECHNICIAN: 'usr_technician_demo',
 };
 
+export function userHeaders(role: UserRole): Record<string, string> {
+  return {
+    'X-User-Id': demoUserIdByRole[role],
+    'X-User-Role': role,
+  };
+}
+
 export function getIncident(
   incidentId: string,
   role: UserRole,
 ): Promise<IncidentDetailData> {
   return getJson<IncidentDetailData>(
     `/api/incidents/${encodeURIComponent(incidentId)}`,
-    {
-      headers: {
-        'X-User-Id': demoUserIdByRole[role],
-        'X-User-Role': role,
-      },
-    },
+    { headers: userHeaders(role) },
   );
 }

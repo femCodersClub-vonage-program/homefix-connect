@@ -8,7 +8,7 @@
 ## 1. Stack
 
 React 19 · TypeScript · Vite 7 · TanStack Query 5 · Vitest + Testing Library +
-jsdom · Vonage Video **Web** SDK (llega con C3).
+jsdom · Vonage Video Web SDK `2.36.0` (C3).
 
 ## 2. Mapa de carpetas (estado actual)
 
@@ -19,20 +19,21 @@ frontend/
 └── src/
     ├── main.tsx             # QueryClientProvider + render
     ├── App.tsx              # render de IncidentDetail con ?incidentId=
-    ├── api/client.ts        # transporte getJson + HttpError (C1)
+    ├── api/client.ts        # transporte getJson/postJson + HttpError (C1/C3)
     ├── api/generated/       # tipos generados desde openapi.yaml (C1)
     ├── api/incidents.ts     # tipos generados + getIncident (C1/C2)
-    ├── components/          # JoinButton (C2)
-    ├── hooks/               # useIncident (C2)
-    ├── pages/               # IncidentDetail (C2)
-    ├── index.css            # estilos base
+    ├── api/video.ts         # requestVideoToken (C3)
+    ├── components/          # JoinButton (C2), VideoCall (C3)
+    ├── hooks/               # useIncident (C2), useVideoToken/useVideoCall (C3)
+    ├── pages/               # IncidentDetail (C2/C3)
+    ├── index.css            # estilos base y stage de vídeo
     └── test/
         ├── fixtures/        # fixtures de API (C2)
         └── setup.ts         # jest-dom + cleanup de Testing Library
 ```
 
-`components/`, `pages/`, `hooks/` y `test/fixtures/` se crearon en C2. C3-C5
-añaden las suyas.
+`components/`, `pages/`, `hooks/` y `test/fixtures/` se crearon en C2. C3 añade
+`VideoCall` y sus hooks; C4-C5 añaden las suyas.
 
 ## 3. Componentes vs hooks
 
