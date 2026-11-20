@@ -33,6 +33,7 @@ frontend: Test Files  3 passed (3) · Tests  15 passed (15)
 | CA-8 · Los logs no llevan el body del SMS ni el teléfono completo (enmascarado `+34******001`) | 1 test | ✅ |
 | CA-9 · Los tests usan el cliente del SDK mockeado (sin red ni credenciales) | Todo el archivo | ✅ |
 | CA-10 · `pnpm check` y `pnpm test` en verde | Ver arriba | ✅ |
+| `createVonageMessagesClient` con config completa: SDK creado con JWT en el primer envío, delega en `messages.send` y se reutiliza (review de Copilot en el #43) | `vonage-messages.factory.test.ts` (2 tests) | ✅ |
 | Prueba manual contra Vonage real (SMS real) | — | ⏳ Pendiente: la cuenta no tiene número para `VONAGE_MESSAGES_FROM` |
 
 ## Proceso TDD
@@ -42,6 +43,8 @@ frontend: Test Files  3 passed (3) · Tests  15 passed (15)
 3. Fase roja: `vonage-errors.ts` + `vonage-messages.client.test.ts` → 20 tests en rojo (`VonageMessagesClient is not a constructor`); el resto del suite seguía en verde.
 4. Fase verde: `VonageMessagesClient` y `createVonageMessagesClient` en `messaging.service.ts` → 24/24. Se añadieron los casos de la ampliación de Q4 (404/409/413 y error desconocido).
 5. Fases roja y verde subidas en un único commit: `feat(messaging): add VonageMessagesClient (B1)` (`4434e8c`).
+
+6. Review de Copilot en el #43: faltaba cubrir el camino feliz de la factoría. Nuevo `vonage-messages.factory.test.ts` (SDK y `node:fs` mockeados, en archivo aparte porque `vi.mock` afecta a todo el archivo) → backend 90/90.
 
 ## Hallazgos durante la implementación
 
