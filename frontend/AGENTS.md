@@ -19,8 +19,9 @@ frontend/
 └── src/
     ├── main.tsx             # QueryClientProvider + render
     ├── App.tsx              # render de IncidentDetail con ?incidentId=
-    ├── api/http.ts          # cliente HTTP provisional (C1 lo sustituye)
-    ├── api/incidents.ts     # tipos provisionales + getIncident (C2)
+    ├── api/client.ts        # transporte getJson + HttpError (C1)
+    ├── api/generated/       # tipos generados desde openapi.yaml (C1)
+    ├── api/incidents.ts     # tipos generados + getIncident (C1/C2)
     ├── components/          # JoinButton (C2)
     ├── hooks/               # useIncident (C2)
     ├── pages/               # IncidentDetail (C2)
@@ -56,9 +57,9 @@ hook.
 ['video-session', visitId]
 ```
 
-- **Nada se escribe a mano que duplique el contrato.** Mientras `pnpm gen:types`
-  no exista, usa `getJson<T>()` de `src/api/http.ts` con tipos locales marcados
-  como provisionales. C1 añade el cliente generado y `http.ts` desaparece.
+- **Nada se escribe a mano que duplique el contrato.** Los tipos viven en
+  `src/api/generated/openapi.d.ts` y se regeneran con `pnpm gen:types`.
+  `src/api/client.ts` es solo el transporte `fetch` fino.
 - La URL base sale de `VITE_API_BASE_URL` (vacía en local: el proxy de Vite
   resuelve `/api`).
 
@@ -102,8 +103,8 @@ pnpm --filter frontend build
 
 - ❌ `fetch` dentro de un componente (usa un hook + TanStack Query).
 - ❌ Guardar tokens o secretos en `localStorage`.
-- ❌ Escribir a mano los tipos de la API en vez de generarlos (cuando C1 añada
-  `pnpm gen:types`).
+- ❌ Escribir a mano los tipos de la API en vez de generarlos con
+  `pnpm gen:types`.
 - ❌ Añadir un router, un estado global (Redux/Zustand) o una librería de UI sin
   PR y justificación.
 - ❌ Cambiar `vite.config.ts` (proxy, `envDir`) sin avisar: afecta a todo el

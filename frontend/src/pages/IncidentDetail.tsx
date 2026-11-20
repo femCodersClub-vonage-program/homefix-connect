@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { HttpError } from '../api/http.js';
+import { HttpError } from '../api/client.js';
 import type {
   IncidentStatus,
   UserRole,

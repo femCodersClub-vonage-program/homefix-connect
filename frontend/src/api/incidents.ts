@@ -1,31 +1,14 @@
-import { getJson } from './http.js';
+import { getJson } from './client.js';
+import type { components } from './generated/openapi.js';
 
-export type IncidentStatus =
-  | 'REPORTED'
-  | 'VISIT_ASSIGNED'
-  | 'VIDEO_COMPLETED'
-  | 'CLOSED';
+type Schemas = components['schemas'];
 
-export type VisitStatus =
-  | 'PENDING'
-  | 'CONFIRMED'
-  | 'COMPLETED'
-  | 'CANCELLED';
-
-export type UserRole = 'TENANT' | 'TECHNICIAN';
-
-/**
- * Tipo provisional hasta que C1 genere el cliente desde `openapi.yaml` (T1).
- * Solo incluye el subconjunto que consume C2.
- */
-export type IncidentDetailData = {
-  id: string;
-  title: string;
-  description: string | null;
-  status: IncidentStatus;
-  technician: { name: string } | null;
-  visit: { scheduledAt: string; status: VisitStatus } | null;
-};
+export type Incident = Schemas['Incident'];
+export type IncidentDetailData = Incident;
+export type IncidentStatus = Schemas['IncidentStatus'];
+export type VisitStatus = Schemas['VisitStatus'];
+export type Role = Schemas['Role'];
+export type UserRole = Extract<Role, 'TENANT' | 'TECHNICIAN'>;
 
 const demoUserIdByRole: Record<UserRole, string> = {
   TENANT: 'usr_tenant_demo',
