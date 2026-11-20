@@ -5,25 +5,37 @@ import { prisma } from '../db/client.js';
 export const incidentsRouter = Router();
 
 /**
- * Endpoint de humo (provisional) para comprobar la cadena completa
- * docker → Prisma → API. El contrato definitivo lo fija `T1` en
- * `backend/openapi.yaml`; quien lo tome debe reconciliar esta forma.
+ * GET /api/incidents/:id — devuelve la incidencia con la forma del schema
+ * `Incident` de `backend/openapi.yaml` (issue #38).
+ *
+ * Se usa un `select` explícito para no exponer datos personales (`phone`,
+ * `email`), relaciones que no son contrato (`tenant`, `manager`) ni campos
+ * internos (`*Id`, fechas, `vonageSessionId`).
  */
 incidentsRouter.get('/incidents/:id', async (req, res) => {
   const { id } = req.params;
 
   const incident = await prisma.incident.findUnique({
     where: { id },
-    include: {
-      tenant: true,
-      technician: true,
-      manager: true,
-      visit: { include: { videoSession: true } },
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      status: true,
+      technician: { select: { id: true, name: true } },
+      visit: {
+        select: {
+          id: true,
+          status: true,
+          scheduledAt: true,
+          videoSession: { select: { id: true, status: true } },
+        },
+      },
     },
   });
 
   if (!incident) {
-    res.status(404).json({ error: 'Incident not found', id });
+    res.status(404).json({ error: 'Incident not found' });
     return;
   }
 
