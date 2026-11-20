@@ -8,7 +8,7 @@
 
 | Etiqueta   | Fichero                                                | Qué y por qué                                                                                  |
 | ---------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
-| `[MODIFY]` | `backend/src/services/messaging.service.ts`            | Añadir `VonageMessagesClient`, el tipo `VonageMessagesSdk` y `createVonageMessagesClient(env)` |
+| `[MODIFY]` | `backend/src/services/messaging.service.ts`            | Añadir `VonageMessagesClient`, el tipo `VonageMessagesSdk` y `createVonageMessagesClient(config)` |
 | `[NEW]`    | `backend/src/__tests__/vonage-messages.client.test.ts` | Tests CA-1 a CA-8 con cliente mockeado                                                         |
 | `[NEW]`    | `backend/src/lib/vonage-errors.ts`                     | Los 3 errores tipados, para que B2/B3 los importen sin depender del cliente                    |
 | `[MODIFY]` | `backend/package.json` + `pnpm-lock.yaml`              | Añadir `@vonage/messages@1.28.1` (Q8), misma versión que trae `@vonage/server-sdk`             |
@@ -21,7 +21,7 @@ Sin cambios en `app.ts` (Q6), `openapi.yaml` ni `schema.prisma`. Dependencia nue
 
 **Fase roja:** escribir `vonage-messages.client.test.ts` con los criterios CA-1 a CA-8 → fallan porque aún no existe `VonageMessagesClient` ni la función `createVonageMessagesClient`.
 
-**Fase verde:** implementar `VonageMessagesClient`, el tipo `VonageMessagesSdk` y `createVonageMessagesClient(env)` y los errores de `vonage-errors.ts`, hasta que pasen.
+**Fase verde:** implementar `VonageMessagesClient`, el tipo `VonageMessagesSdk` y `createVonageMessagesClient(config)` y los errores de `vonage-errors.ts`, hasta que pasen.
 
 **Dobles de prueba:**
 
@@ -38,7 +38,7 @@ Sin cambios en `app.ts` (Q6), `openapi.yaml` ni `schema.prisma`. Dependencia nue
 3. ✅ SDK verificado (`send` → `{ messageUUID }`, clase `SMS`, errores `VetchError` con `error.response.status`).
 4. ✅ Crear `vonage-errors.ts` con los 3 errores tipados (`VonageAuthError`, `VonageValidationError`, `VonageNetworkError`).
 5. ✅ Fase roja (20/11, 20 tests en rojo): escribir los tests CA-1 a CA-8.
-6. ✅ Fase verde (20/11, 24 tests en verde): implementar `VonageMessagesClient` y `createVonageMessagesClient(env)`.
+6. ✅ Fase verde (20/11, 24 tests en verde): implementar `VonageMessagesClient` y `createVonageMessagesClient(config)`.
 7. Pasar `pnpm check` y `pnpm test`.
 8. Prueba manual opcional contra Vonage real.
 9. Escribir `04-validation.md` y abrir el PR con `Closes #12`.
