@@ -1,6 +1,6 @@
 # B1 · Cliente Vonage Messages (wrapper) — Especificación
 
-> Issue: #12 · Rama: `feat/B1-messages-client` · Interface: `backend/src/services/messaging.service.ts` (X1) · Requisitos: `01-requirements.md` · Estado: borrador
+> Issue: #12 · Rama: `feat/B1-messages-client` · Interface: `backend/src/services/messaging.service.ts` (X1) · Requisitos: `01-requirements.md` · Estado: decisiones Q1–Q8 cerradas (20/11)
 
 ## 1. Resumen y contexto
 
@@ -12,7 +12,7 @@ La B1 la usará la B2, que implementa `MessagingService.sendSms` y la plantilla 
 
 La B1 no se conecta en `app.ts` (eso lo hace la B2/B3) y no hace reintentos si falla el envío (quedan para la B3).
 
-Para programarla hace falta el SDK `@vonage/server-sdk`, que llega con el #40 (A2), por eso la spec y el plan se escriben ya y el código se programa cuando el #40 esté en `main`.
+Usa el SDK `@vonage/server-sdk` (entró con el #40, A2, ya en `main`) y añade `@vonage/messages` para construir el SMS con la clase `SMS` (Q8).
 
 ## 2. Alcance
 
@@ -44,7 +44,7 @@ Para programarla hace falta el SDK `@vonage/server-sdk`, que llega con el #40 (A
 | RF-4  | Errores tipados: `VonageAuthError`, `VonageNetworkError`, `VonageValidationError`                                  | E-03 · Issue #12                       |
 | RF-5  | Test unitario que **no** llama a Vonage real                                                                       | E-04 · Issue #12                       |
 | RF-6  | Loguea request/response sin el body completo del SMS                                                               | E-05 · Issue #12 · `backend/AGENTS.md` |
-| RF-7  | `providerMessageId` = `message_uuid` de la respuesta de Vonage                                                     | E-06 · Issue #12                       |
+| RF-7  | `providerMessageId` = id del mensaje de Vonage (`messageUUID` en el SDK; `message_uuid` en la API REST)             | E-06 · Issue #12 · Q8                  |
 | RF-8  | El cliente del SDK se inyecta en el constructor para mockearlo en tests                                            | D-02 · `AGENTS.md`                     |
 | RF-9  | Sin credenciales la app arranca; `sendSms` falla con error claro                                                   | D-03 · `.env.example` · Q5             |
 | RF-10 | En los logs el teléfono va enmascarado (p. ej. `+34*****001`)                                                      | D-04 · `AGENTS.md` §9.1                |
@@ -56,7 +56,7 @@ Para programarla hace falta el SDK `@vonage/server-sdk`, que llega con el #40 (A
 
 - **Número de destino:** se recibe en formato E.164 con `+` y se envía a Vonage sin el `+` (el wrapper lo quita).
 - **Remitente:** sale siempre de `VONAGE_MESSAGES_FROM`.
-- **Autenticación:** JWT con `VONAGE_APPLICATION_ID` + `private.key` (⏳ pendiente Q1).
+- **Autenticación:** JWT con `VONAGE_APPLICATION_ID` + `private.key`, misma aplicación que A2 (Q1 ✅).
 - **Privacidad en logs:** no se loguea el body completo del SMS y el teléfono va enmascarado (p. ej. `+34*****001`).
 
 ## 5. Contrato (firma pública del wrapper)
@@ -65,16 +65,16 @@ Para programarla hace falta el SDK `@vonage/server-sdk`, que llega con el #40 (A
 
 ```ts
 class VonageMessagesClient implements MessagingService {
-  constructor(client: VonageClient, from: string);
+  constructor(options: { client: VonageMessagesSdk; from: string });
   sendSms(to: string, body: string): Promise<{ providerMessageId: string }>;
 }
 ```
 
-> ⚠️ Pendiente de verificar en el SDK (cuando #40 esté en `main`): el nombre exacto del tipo del cliente (`VonageClient`).
+> `VonageMessagesSdk` es el tipo mínimo de lo que usamos de `vonage.messages` (método `send` → `{ messageUUID }`), igual que `VonageVideoClient` en A2. Constructor con objeto de opciones, como A2.
 
 - `to`: número en formato E.164 con `+`.
 - `body`: contenido del SMS.
-- Devuelve `providerMessageId`, que es el `message_uuid` de la respuesta.
+- Devuelve `providerMessageId`, que es el id del mensaje que devuelve Vonage (`messageUUID`).
 
 ## 6. Manejo de errores
 
@@ -87,7 +87,7 @@ class VonageMessagesClient implements MessagingService {
 | Vonage responde 400 o 422                         | `VonageValidationError`             |
 | Vonage responde 429 o 5xx                         | `VonageNetworkError`                |
 | Fallo de red o timeout                            | `VonageNetworkError`                |
-| Faltan credenciales                               | `VonageAuthError` (⏳ pendiente Q5) |
+| Faltan credenciales o `VONAGE_MESSAGES_FROM`      | `VonageAuthError` (Q5 ✅)           |
 
 ## 7. Casos límite
 
@@ -97,16 +97,16 @@ class VonageMessagesClient implements MessagingService {
 | -------------------------------------------- | ---------------------------------------------------------------- |
 | `to` sin `+` (p. ej. `34600000001`)          | `VonageValidationError` (no cumple la regex de Q2)               |
 | `to` con espacios (p. ej. `+34 600 000 001`) | `VonageValidationError` (no cumple la regex de Q2)               |
-| `body` vacío                                 | `VonageValidationError` sin llamar a Vonage ⏳                   |
+| `body` vacío                                 | `VonageValidationError` sin llamar a Vonage                      |
 | `body` de más de 160 caracteres              | Se envía igual; Vonage lo parte en varios SMS ⏳ (por verificar) |
 | Falta `VONAGE_MESSAGES_FROM`                 | `VonageAuthError` (Q5)                                           |
-| Vonage responde OK pero sin `message_uuid`   | `VonageNetworkError` ⏳                                          |
+| Vonage responde OK pero sin `messageUUID`    | `VonageNetworkError`                                             |
 
 ## 8. Criterios de aceptación
 
 <!-- Lista verificable, idealmente Dado / Cuando / Entonces. -->
 
-- [ ] **CA-1 · Envío correcto:** Dado un `to` E.164 válido y un `body`, cuando llamo a `sendSms`, entonces el SDK recibe el número **sin `+`**, el remitente de `VONAGE_MESSAGES_FROM`, y devuelve `{ providerMessageId }` igual al `message_uuid`.
+- [ ] **CA-1 · Envío correcto:** Dado un `to` E.164 válido y un `body`, cuando llamo a `sendSms`, entonces el SDK recibe el número **sin `+`**, el remitente de `VONAGE_MESSAGES_FROM`, y devuelve `{ providerMessageId }` igual al `messageUUID` de la respuesta.
 - [ ] **CA-2 · Número inválido:** Dado un `to` que no cumple E.164 (sin `+`, con espacios…), cuando llamo a `sendSms`, entonces lanza `VonageValidationError` y **no** se llama al SDK.
 - [ ] **CA-3 · Body vacío:** Dado un `body` vacío, cuando llamo a `sendSms`, entonces lanza `VonageValidationError` y **no** se llama al SDK.
 - [ ] **CA-4 · Auth:** Dado que Vonage responde 401 o 403, entonces lanza `VonageAuthError`.
@@ -124,25 +124,29 @@ class VonageMessagesClient implements MessagingService {
 - `src/services/messaging.service.ts`:
   - Tipo mínimo `VonageMessagesSdk = { send(msg): Promise<{ messageUUID: string }> }` (lo que usamos del SDK; fácil de mockear).
   - `class VonageMessagesClient implements MessagingService`, constructor `({ client, from })`.
-  - `sendSms`: valida `to` (regex de Q2) y `body`, quita el `+`, llama a `client.send(...)` con `channel: 'sms'`, mapea errores (apartado 6) y devuelve `{ providerMessageId }`.
+  - `sendSms`: valida `to` (regex de Q2) y `body`, quita el `+`, construye el mensaje con `new SMS({ to, from, text })` de `@vonage/messages` (Q8), llama a `client.send(...)`, mapea errores (apartado 6) y devuelve `{ providerMessageId }`.
   - `createVonageMessagesClient(env)`: si hay credenciales y `VONAGE_MESSAGES_FROM`, crea el cliente real del SDK con `VONAGE_APPLICATION_ID` + `VONAGE_PRIVATE_KEY_PATH`; si no, un cliente que lanza `VonageAuthError` (Q5).
-- Errores (`VonageAuthError`, `VonageValidationError`, `VonageNetworkError`): en el mismo archivo o en `src/lib/vonage-errors.ts` ⏳ (a decidir en el plan).
+- Errores (`VonageAuthError`, `VonageValidationError`, `VonageNetworkError`): en `src/lib/vonage-errors.ts` (decidido en el plan).
 - Credenciales: se leen de `src/config/env.ts` (ya existen, opcionales).
 - **No** se toca `src/app.ts` (Q6).
 
-> ⚠️ Por verificar en el SDK cuando #40 esté en `main`: el nombre del método (`send`), el formato del mensaje SMS y el campo de la respuesta (`messageUUID`).
+> ✅ Verificado en el SDK (`@vonage/server-sdk` 3.31.1 / `@vonage/messages` 1.28.1): `messages.send(...)` devuelve `{ messageUUID }` y `@vonage/messages` exporta la clase `SMS`.
+> ⚠️ Por verificar en la fase roja: dónde trae el SDK el código HTTP cuando Vonage responde con error (necesario para el mapeo de Q4).
 
-## 10. Decisiones (Q1–Q7)
+## 10. Decisiones (Q1–Q8)
 
 <!-- Cada Q con estado: ✅ decidido / ⏳ pendiente de respuesta en el #12. -->
 
-- **Q1 · Autenticación:** JWT con `VONAGE_APPLICATION_ID` + `private.key` (las mismas credenciales que A2; lo recomienda Vonage). Requiere activar _Messages_ en la aplicación de Vonage. Alternativa: Basic con `VONAGE_API_KEY` / `VONAGE_API_SECRET`. · ⏳ pendiente
-- **Q2 · Validar `to`:** el wrapper valida E.164 y lanza `VonageValidationError` sin llamar a Vonage. Como Vonage quiere el número sin `+`, el wrapper valida con `+` y lo quita antes de enviar. · ⏳ pendiente
-- **Q3 · Mock en tests:** se inyecta el cliente del SDK y se mockea con Vitest (como en A2), sin dependencias nuevas (nock/msw no están en el proyecto). · ⏳ pendiente
-- **Q4 · Mapeo de errores:** 401/403 → `VonageAuthError` · 400/422 → `VonageValidationError` · 429, 5xx y errores de red → `VonageNetworkError`. Los reintentos quedan para B3. · ⏳ pendiente
-- **Q5 · Sin credenciales:** la app arranca y `sendSms` lanza error (mismo criterio que A2). · ⏳ pendiente
-- **Q6 · Alcance:** B1 solo entrega el cliente; lo conecta en `app.ts` la B2/B3. · ⏳ pendiente
-- **Q7 · Dependencia:** el SDK entra con A2 (#40). Spec y plan ya; el código cuando A2 esté en `main`. · ⏳ pendiente
+Decididas el 20/11/2026 y anotadas en el #12.
+
+- **Q1 · Autenticación:** JWT con `VONAGE_APPLICATION_ID` + `private.key`, la misma aplicación de Vonage que A2 (`homefix-connect-dev`). Hay que activar _Messages_ en esa aplicación sin regenerar la clave. · ✅
+- **Q2 · Validar `to`:** el wrapper valida E.164 con `+`, lanza `VonageValidationError` sin llamar a Vonage y quita el `+` antes de enviar. · ✅
+- **Q3 · Mock en tests:** cliente del SDK inyectado y mockeado con Vitest (como en A2); sin nock/msw. · ✅
+- **Q4 · Mapeo de errores:** 401/403 → `VonageAuthError` · 400/422 → `VonageValidationError` · 429, 5xx y errores de red → `VonageNetworkError`. Reintentos → B3. · ✅
+- **Q5 · Sin credenciales:** la app arranca y `sendSms` lanza `VonageAuthError` (también si falta `VONAGE_MESSAGES_FROM`). · ✅
+- **Q6 · Alcance:** B1 solo entrega el cliente; lo conecta en `app.ts` la B2/B3. · ✅
+- **Q7 · Dependencia:** resuelta, #40 (A2) en `main` el 20/11. · ✅
+- **Q8 · Import del SDK:** se añade `@vonage/messages` como dependencia directa del backend en la versión que ya trae `@vonage/server-sdk` (1.28.1) y se usa la clase `SMS`. `sendSms` devuelve el id del mensaje (`messageUUID` → `providerMessageId`). Se declara en el PR como dependencia nueva (AGENTS.md §12). · ✅
 
 ## 11. Estrategia de pruebas
 
@@ -158,8 +162,9 @@ class VonageMessagesClient implements MessagingService {
 
 <!-- #40 (A2) en main por el SDK; activar Messages en la app de Vonage. -->
 
-- **#40 (A2) en `main`**: trae el SDK `@vonage/server-sdk`. El código de la B1 espera a ese merge (Q7).
-- **Respuestas Q1–Q7 en el #12**: hay que confirmarlas antes de pasar la spec a aprobada.
-- **Activar _Messages_** en la aplicación de Vonage (solo si Q1 = JWT y para la prueba manual).
+- **#40 (A2) en `main`** ✅: trae el SDK `@vonage/server-sdk`.
+- **`@vonage/messages` 1.28.1** como dependencia directa del backend (Q8).
+- **Decisiones Q1–Q8** ✅ (20/11).
+- **Activar _Messages_** en la aplicación `homefix-connect-dev` de Vonage (Q1), para la prueba manual.
 - **T1 y T2** (contrato OpenAPI y Prisma): ya en `main` ✅.
 - **Bloquea a:** B2 (`MessagingService.sendSms` + plantilla).

@@ -1,6 +1,6 @@
 # B1 · Cliente Vonage Messages — Plan de implementación
 
-> Spec: [`02-specification.md`](./02-specification.md) · Issue: #12 · Estado: borrador
+> Spec: [`02-specification.md`](./02-specification.md) · Issue: #12 · Estado: listo para TDD (Q1–Q8 cerradas, 20/11)
 
 ## 1. Ficheros afectados
 
@@ -11,8 +11,9 @@
 | `[MODIFY]` | `backend/src/services/messaging.service.ts`            | Añadir `VonageMessagesClient`, el tipo `VonageMessagesSdk` y `createVonageMessagesClient(env)` |
 | `[NEW]`    | `backend/src/__tests__/vonage-messages.client.test.ts` | Tests CA-1 a CA-8 con cliente mockeado                                                         |
 | `[NEW]`    | `backend/src/lib/vonage-errors.ts`                     | Los 3 errores tipados, para que B2/B3 los importen sin depender del cliente                    |
+| `[MODIFY]` | `backend/package.json` + `pnpm-lock.yaml`              | Añadir `@vonage/messages@1.28.1` (Q8), misma versión que trae `@vonage/server-sdk`             |
 
-Sin cambios en `app.ts` (Q6), `openapi.yaml` ni `schema.prisma`.
+Sin cambios en `app.ts` (Q6), `openapi.yaml` ni `schema.prisma`. Dependencia nueva: `@vonage/messages` (se declara en el PR).
 
 ## 2. Estrategia de pruebas (TDD)
 
@@ -32,9 +33,9 @@ Sin cambios en `app.ts` (Q6), `openapi.yaml` ni `schema.prisma`.
 
 <!-- Pasos numerados, de la rama al PR. -->
 
-1. Esperar a que #40 esté en `main` y a las respuestas de Q1–Q7 en el #12.
-2. Rebasar `feat/B1-messages-client` sobre `main` y hacer `pnpm install`.
-3. Verificar en el SDK el nombre del método (`send`), el formato del mensaje SMS y el campo de la respuesta (`messageUUID`) y actualizar la spec si cambia algo.
+1. ✅ #40 en `main` y Q1–Q8 decididas (20/11).
+2. ✅ `main` mergeado en `feat/B1-messages-client`. Añadir la dependencia: `pnpm --filter backend add @vonage/messages@1.28.1`.
+3. ✅ SDK verificado (`send` → `{ messageUUID }`, clase `SMS`). Pendiente: ver dónde trae el SDK el código HTTP en los errores (para Q4).
 4. Crear `vonage-errors.ts` con los 3 errores tipados (`VonageAuthError`, `VonageValidationError`, `VonageNetworkError`).
 5. Fase roja: escribir los tests CA-1 a CA-8.
 6. Fase verde: implementar `VonageMessagesClient` y `createVonageMessagesClient(env)`.
@@ -49,8 +50,8 @@ Sin cambios en `app.ts` (Q6), `openapi.yaml` ni `schema.prisma`.
 | Riesgo                                                                                  | Mitigación                                                                                                                                  |
 | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | El SDK no se llama como pensamos (`send`, `messageUUID`)                                | se verifica en el paso 3 y se ajusta el tipo mínimo `VonageMessagesSdk`                                                                     |
-| `@vonage/messages` no está en el package.json del backend (pnpm no deja importar `SMS`) | se envía un objeto plano a `vonage.messages.send({ channel: 'sms', messageType: 'text', to, from, text })`, sin añadir dependencias (Q8 ⏳) |
-| Contestan Q1–Q7 con otra opción                                                         | se actualiza la spec y después se adaptan los tests y la implementación                                                                     |
+| `@vonage/messages` en otra versión que la que usa `@vonage/server-sdk` (tipos duplicados) | fijar la misma versión (1.28.1) y revisar `pnpm-lock.yaml` (Q8 ✅) |
+| El SDK no expone el código HTTP en el error como esperamos                              | verlo en la fase roja y ajustar el mapeo de Q4 en la spec                                                                                   |
 | La cuenta de prueba no permite enviar SMS a números españoles                           | usar un número de prueba permitido o mockear el envío                                                                                       |
 | Conflicto en `pnpm-lock.yaml` al rebasar sobre `main`                                   | resolver el conflicto manualmente y ejecutar `pnpm install`                                                                                 |
 
@@ -58,7 +59,7 @@ Sin cambios en `app.ts` (Q6), `openapi.yaml` ni `schema.prisma`.
 
 <!-- Lo que depende de respuestas del #12 o del #40. -->
 
-- Respuestas Q1–Q7 en el #12.
+- ✅ Decisiones Q1–Q8 (20/11).
 - ✅ Merge del #40 (A2), 20/11.
 - ✅ SDK verificado (v3.31.1): `vonage.messages.send(...)` devuelve `{ messageUUID }`; SMS con `channel: 'sms'`, `messageType: 'text'`.
-- Decidir si se activa _Messages_ en la app de Vonage para la prueba manual.
+- Activar _Messages_ en la app `homefix-connect-dev` de Vonage (Q1) para la prueba manual.

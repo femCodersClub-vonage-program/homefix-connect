@@ -31,9 +31,9 @@
 
 Según la documentación oficial de la Messages API (developer.vonage.com/en/messages/technical-details):
 
-- El envío es `vonage.messages.send({ messageType: 'sms', channel: 'sms', to, from, text })` y la respuesta trae `messageUUID`.
+- El envío es `vonage.messages.send(...)` con `channel: 'sms'` y `messageType: 'text'`; el SDK devuelve `{ messageUUID }` (la API REST lo llama `message_uuid`). Verificado en `@vonage/server-sdk` 3.31.1.
 - La Messages API admite **JWT** (`applicationId` + `privateKey`, las mismas credenciales que A2) o **Basic** (`apiKey` + `apiSecret`). Vonage recomienda JWT; con JWT los recibos de entrega van al webhook de la aplicación y con Basic al de la cuenta.
-- El SDK de A2 (`@vonage/server-sdk`) ya incluye `messages`. Ese paquete entra con el PR de A2 (#40), que aún no está mergeado.
+- El SDK de A2 (`@vonage/server-sdk`) ya incluye `messages`. Ese paquete entró con el PR de A2 (#40), mergeado el 20/11.
 - ✅ **Formato del número (confirmado en la referencia de la API y en el soporte de Vonage):** E.164 **sin** `+` ni `00`, empezando por el código de país (p. ej. `447700900000`). Como `User.phone` del seed va con `+` (`+34600000001`), el wrapper valida E.164 con `+` y quita el `+` antes de llamar a Vonage.
 
 ## 3. Desconocidos (preguntas para el issue)
@@ -47,10 +47,22 @@ Según la documentación oficial de la Messages API (developer.vonage.com/en/mes
 | Q5 | Falta `VONAGE_MESSAGES_FROM` o credenciales | A) Fallar al arrancar · B) La app arranca y `sendSms` lanza `VonageAuthError` | **B**, igual que A2 |
 | Q6 | ¿B1 conecta el cliente en `app.ts`? | A) Sí · B) No: B1 solo entrega el cliente; lo conecta B2/B3 | **B**: B1 es el wrapper; quien lo usa es B2/B3 |
 | Q7 | Dependencia del SDK (viene con A2, #40) | A) Esperar a que se mergee A2 y rebasar · B) Basar B1 en la rama de A2 (stacked) | **A**: spec y plan ya; el código, cuando A2 esté en `main` |
+| Q8 | Import del SDK: `@vonage/messages` no está en el `package.json` del backend (pnpm no deja importar `SMS`) | A) Objeto plano a `vonage.messages.send(...)` sin dependencias nuevas · B) Añadir `@vonage/messages` y usar la clase `SMS` | — |
 
 ## 4. Decisiones de Clarificación Acordadas
 
-_Pendiente de respuesta en el issue #12._
+Decididas por Carolina (asignada de la B1) el 20/11/2026 y anotadas en el #12.
+
+| #  | Decisión |
+| -- | -------- |
+| Q1 | ✅ **A · JWT** con `VONAGE_APPLICATION_ID` + `private.key`: la misma aplicación de Vonage que A2 (`homefix-connect-dev`). Hay que activar *Messages* en esa aplicación (sin regenerar la clave) |
+| Q2 | ✅ **A** · El wrapper valida E.164 con `+` (`^\+[1-9]\d{6,14}$`), lanza `VonageValidationError` sin llamar al SDK y quita el `+` antes de enviar |
+| Q3 | ✅ **A** · Cliente del SDK inyectado y mockeado con Vitest; sin nock/msw |
+| Q4 | ✅ 401/403 → `VonageAuthError` · 400/422 → `VonageValidationError` · 429, 5xx, timeout y red → `VonageNetworkError`. Reintentos → B3 |
+| Q5 | ✅ **B** · La app arranca; `sendSms` lanza `VonageAuthError` si faltan credenciales o `VONAGE_MESSAGES_FROM` |
+| Q6 | ✅ **B** · B1 solo entrega el cliente; lo conecta B2/B3 |
+| Q7 | ✅ Resuelta: #40 (A2) mergeado en `main` el 20/11 |
+| Q8 | ✅ Se añade `@vonage/messages` como dependencia directa del backend, **misma versión que trae `@vonage/server-sdk` (1.28.1)**, y el mensaje se construye con la clase `SMS`. `sendSms` devuelve el id del mensaje (`messageUUID` → `providerMessageId`). Dependencia nueva declarada en el PR (AGENTS.md §12) |
 
 ## 5. Fuera de alcance
 
