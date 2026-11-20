@@ -15,7 +15,12 @@ export class PrismaIncidentRepo implements IncidentRepo {
   findById(id: string): Promise<IncidentWithRelations | null> {
     return this.prisma.incident.findUnique({
       where: { id },
-      include: { technician: true, visit: { include: { videoSession: true } } },
+      include: {
+        technician: true,
+        tenant: true,
+        manager: true,
+        visit: { include: { videoSession: true } },
+      },
     });
   }
 
