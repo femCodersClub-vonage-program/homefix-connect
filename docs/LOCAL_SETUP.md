@@ -551,3 +551,48 @@ Es importante no confundir «levanta» con «funciona el MVP»:
 
 El plan completo de tareas está en [`TASKS.md`](./TASKS.md) y el alcance del MVP
 en [`MVP_DEFINITION.md`](./MVP_DEFINITION.md).
+
+---
+
+## 13. Videollamada real con Vonage Video (A2)
+
+Sin credenciales todo arranca igual: solo `POST /api/video-tokens` responde
+`500` («Credenciales de Vonage Video no configuradas»). Para probar con Vonage
+de verdad:
+
+1. Pide a la mentora el **Application ID** y el archivo **`private.key`** de la
+   aplicación de Vonage Video del equipo (por privado, nunca por el canal).
+2. Guarda el `private.key` en la carpeta **`backend/`**. Está en `.gitignore`:
+   compruébalo con `git status` (no debe aparecer).
+3. En el `.env` de la raíz:
+
+   ```bash
+   VONAGE_APPLICATION_ID=<el Application ID>
+   VONAGE_PRIVATE_KEY_PATH=./private.key
+   ```
+
+   La ruta relativa se resuelve **desde `backend/`**, que es donde corre el
+   backend con `pnpm dev`. Si prefieres dejar el archivo en otro sitio, pon la
+   ruta absoluta.
+4. `VONAGE_API_KEY` / `VONAGE_API_SECRET` **no** hacen falta para Video.
+5. Arranca (`pnpm dev`) y pide un token con los datos del seed:
+
+   ```bash
+   curl -X POST http://localhost:3000/api/video-tokens \
+     -H "Content-Type: application/json" \
+     -H "X-User-Id: usr_tenant_demo" -H "X-User-Role: TENANT" \
+     -d '{"incidentId":"inc_demo"}'
+   ```
+
+   Debe devolver `200` con `applicationId`, `sessionId` (un id real de Vonage,
+   no `stub-session-…`) y `token`.
+
+> En PowerShell usa `curl.exe` en lugar de `curl` y escribe el comando en una
+> sola línea, o pruébalo desde la pantalla de la incidencia (`pnpm dev` →
+> http://localhost:5173).
+
+| Error | Causa | Solución |
+|---|---|---|
+| `500` y en el log «Credenciales de Vonage Video no configuradas» | Falta `VONAGE_APPLICATION_ID` o `VONAGE_PRIVATE_KEY_PATH` en `.env` | Rellena las dos variables y reinicia `pnpm dev` |
+| `500` y en el log «No se encuentra el private.key… en <ruta>» | El archivo no está donde dice la ruta | Mueve el `private.key` a esa ruta o corrige `VONAGE_PRIVATE_KEY_PATH` |
+| `500` con error de Vonage (401/403) | Application ID y `private.key` no son de la misma aplicación | Pide de nuevo las credenciales a la mentora |
