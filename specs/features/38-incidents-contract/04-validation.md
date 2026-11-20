@@ -20,13 +20,13 @@ $ pnpm check
 
 ## Criterios de aceptación
 
-| Criterio | Test (`app.test.ts`) | Resultado |
-|---|---|---|
-| La ruta pide a Prisma solo los campos del contrato (`select`, sin `include`) | `pide a Prisma solo los campos del contrato` | ✅ |
-| CA-1 · 200 solo con los campos del schema `Incident` | `CA-1: devuelve 200 solo con los campos del contrato` | ✅ |
-| CA-2 · No expone `phone`, `email`, `tenant`, `manager`, `*Id`, fechas ni `vonageSessionId` | `CA-2: no expone datos personales ni campos internos` | ✅ |
-| CA-3 · `technician` y `visit` son `null` si no existen | `CA-3: technician y visit son null si no existen` | ✅ |
-| CA-4 · 404 `{ error: 'Incident not found', id }` | `CA-4: devuelve 404 cuando no existe` | ✅ |
+| Criterio                                                                                   | Test (`app.test.ts`)                                  | Resultado |
+| ------------------------------------------------------------------------------------------ | ----------------------------------------------------- | --------- |
+| La ruta pide a Prisma solo los campos del contrato (`select`, sin `include`)               | `pide a Prisma solo los campos del contrato`          | ✅        |
+| CA-1 · 200 solo con los campos del schema `Incident`                                       | `CA-1: devuelve 200 solo con los campos del contrato` | ✅        |
+| CA-2 · No expone `phone`, `email`, `tenant`, `manager`, `*Id`, fechas ni `vonageSessionId` | `CA-2: no expone datos personales ni campos internos` | ✅        |
+| CA-3 · `technician` y `visit` son `null` si no existen                                     | `CA-3: technician y visit son null si no existen`     | ✅        |
+| CA-4 · 404 { error: 'Incident not found' }                                                 | CA-4: devuelve 404 cuando no existe                   | ✅        |
 
 ## Proceso TDD
 
@@ -36,11 +36,11 @@ $ pnpm check
 ## Decisiones aplicadas
 
 - Q1: opción A (`select` de Prisma), la del issue.
-- Q2: se mantiene el 404 actual `{ error, id }`.
+- Q2: se quita el id del 404 para cumplir el schema Error (review de Miranda, 19/11).
 - Q3: `openapi.yaml` sin cambios.
 
 ## Limitaciones y pendientes
 
 - Con Prisma mockeado, lo que demuestra el filtrado es el test del `select`; los demás comprueban la forma de la respuesta.
-- Pendiente: probar contra la BD real (`pnpm db:up` + seed + `curl http://localhost:<puerto>/api/incidents/inc_demo`) cuando Docker esté levantado.
+- Probado contra Postgres real con inc_demo (Miranda, 19/11): el 200 cumple el contrato.
 - Si el equipo prefiere la opción B (repo + mapper), se cambia en este mismo PR.

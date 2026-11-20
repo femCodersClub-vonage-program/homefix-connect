@@ -16,7 +16,7 @@ Spec: `02-specification.md`. Opción A (Q1), la que pide el issue.
   2. CA-1: 200 y las claves de la respuesta son exactamente las del contrato, también dentro de `technician`, `visit` y `videoSession`.
   3. CA-2: la respuesta no contiene `phone`, `email`, `tenant`, `manager`, `tenantId`, `technicianId`, `managerId`, `createdAt`, `updatedAt` ni `vonageSessionId`.
   4. CA-3: incidencia sin técnico ni visita → `technician: null`, `visit: null`.
-  5. CA-4: id inexistente → 404 `{ error: 'Incident not found', id }`.
+  5. CA-4: id inexistente → 404 `{ error: 'Incident not found' }`.
 - Limitación conocida de la opción A: con Prisma mockeado, el test 1 es el que demuestra el filtrado; los demás comprueban la forma de la respuesta.
 
 ## 3. Orden de ejecución

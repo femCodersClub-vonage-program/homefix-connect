@@ -142,7 +142,7 @@ describe('GET /api/incidents/:id', () => {
     const res = await request(app).get('/api/incidents/nope');
 
     expect(res.status).toBe(404);
-    expect(res.body).toEqual({ error: 'Incident not found', id: 'nope' });
+    expect(res.body).toEqual({ error: 'Incident not found' });
   });
 });
 

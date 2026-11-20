@@ -35,7 +35,7 @@ incidentsRouter.get('/incidents/:id', async (req, res) => {
   });
 
   if (!incident) {
-    res.status(404).json({ error: 'Incident not found', id });
+    res.status(404).json({ error: 'Incident not found' });
     return;
   }
 
