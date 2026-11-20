@@ -3,12 +3,14 @@ import type { IncidentStatus, VisitStatus } from '../api/incidents.js';
 type JoinButtonProps = {
   incidentStatus: IncidentStatus;
   visitStatus: VisitStatus | null;
+  isConnecting?: boolean;
   onClick?: () => void;
 };
 
 export function JoinButton({
   incidentStatus,
   visitStatus,
+  isConnecting = false,
   onClick,
 }: JoinButtonProps) {
   const canJoin =
@@ -16,13 +18,13 @@ export function JoinButton({
 
   let label = 'Videollamada no disponible';
   if (canJoin) {
-    label = 'Entrar a la videollamada';
+    label = isConnecting ? 'Conectando…' : 'Entrar a la videollamada';
   } else if (incidentStatus === 'VIDEO_COMPLETED') {
     label = 'Visita realizada';
   }
 
   return (
-    <button type="button" disabled={!canJoin} onClick={onClick}>
+    <button type="button" disabled={!canJoin || isConnecting} onClick={onClick}>
       {label}
     </button>
   );
