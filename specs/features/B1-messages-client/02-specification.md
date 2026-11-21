@@ -126,7 +126,7 @@ class VonageMessagesClient implements MessagingService {
 - `src/services/messaging.service.ts`:
   - Tipo mínimo `VonageMessagesSdk = { send(msg: SMS): Promise<{ messageUUID?: string }> }` (`messageUUID` opcional para cubrir el caso «respuesta sin id») (lo que usamos del SDK; fácil de mockear).
   - `class VonageMessagesClient implements MessagingService`, constructor `({ client, from })`.
-  - `sendSms`: valida `to` (regex de Q2) y `body`, quita el `+`, construye el mensaje con `new SMS({ to, from, text })` de `@vonage/messages` (Q8), llama a `client.send(...)`, mapea errores (apartado 6) y devuelve `{ providerMessageId }`.
+  - `sendSms`: valida `to` (regex de Q2) y `body`, quita el `+`, construye el mensaje con `new SMS(text, to, from)` de `@vonage/messages` (Q8, constructor posicional; ver nota abajo), llama a `client.send(...)`, mapea errores (apartado 6) y devuelve `{ providerMessageId }`.
   - `createVonageMessagesClient({ applicationId, privateKeyPath, from })` (como `createVonageVideoService` en A2; B2/B3 le pasan `env.VONAGE_APPLICATION_ID`, `env.VONAGE_PRIVATE_KEY_PATH` y `env.VONAGE_MESSAGES_FROM`): si hay credenciales y remitente, crea el cliente real del SDK en la primera llamada; si no, `sendSms` lanza `VonageAuthError` (Q5). También lanza `VonageAuthError` si la ruta del `private.key` no existe.
 - Errores (`VonageAuthError`, `VonageValidationError`, `VonageNetworkError`): en `src/lib/vonage-errors.ts` (decidido en el plan).
 - Credenciales: se leen de `src/config/env.ts` (ya existen, opcionales).

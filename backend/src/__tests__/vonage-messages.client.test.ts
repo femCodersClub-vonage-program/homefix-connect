@@ -191,6 +191,7 @@ describe('createVonageMessagesClient', () => {
     ['falta applicationId', { applicationId: undefined, privateKeyPath: './private.key', from: FROM }],
     ['falta privateKeyPath', { applicationId: 'app-id', privateKeyPath: undefined, from: FROM }],
     ['falta VONAGE_MESSAGES_FROM', { applicationId: 'app-id', privateKeyPath: './private.key', from: undefined }],
+    ['VONAGE_MESSAGES_FROM en blanco', { applicationId: 'app-id', privateKeyPath: './private.key', from: '   ' }],
   ])(
     'CA-7 · %s: se crea sin error y sendSms lanza VonageAuthError',
     async (_caso, config) => {

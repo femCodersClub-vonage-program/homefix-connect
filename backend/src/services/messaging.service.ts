@@ -176,7 +176,7 @@ export function createVonageMessagesClient(
     return sdkClient;
   }
 
-  if (!from) {
+  if (!from?.trim()) {
     return {
       sendSms: () =>
         Promise.reject(

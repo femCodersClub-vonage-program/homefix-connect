@@ -14,9 +14,9 @@ frontend typecheck$ tsc --noEmit -p tsconfig.json  → Done
 backend typecheck$ tsc --noEmit -p tsconfig.json   → Done
 
 $ pnpm test
-backend:  Test Files  7 passed (7) · Tests  88 passed (88)
-          (de ellos, 24 en src/__tests__/vonage-messages.client.test.ts)
-frontend: Test Files  3 passed (3) · Tests  15 passed (15)
+backend:  Test Files  8 passed (8) · Tests  91 passed (91)
+          (de ellos, 25 en src/__tests__/vonage-messages.client.test.ts y 2 en src/__tests__/vonage-messages.factory.test.ts)
+frontend: Test Files  5 passed (5) · Tests  36 passed (36)   (tras git merge main con C3; B1 no toca frontend)
 ```
 
 ## Criterios de aceptación
@@ -45,6 +45,8 @@ frontend: Test Files  3 passed (3) · Tests  15 passed (15)
 5. Fases roja y verde subidas en un único commit: `feat(messaging): add VonageMessagesClient (B1)` (`4434e8c`).
 
 6. Review de Copilot en el #43: faltaba cubrir el camino feliz de la factoría. Nuevo `vonage-messages.factory.test.ts` (SDK y `node:fs` mockeados, en archivo aparte porque `vi.mock` afecta a todo el archivo) → backend 90/90.
+
+7. Review de Miranda en el #43 (21/11): `git merge main` (C3), `if (!from?.trim())` en `createVonageMessagesClient` para rechazar un remitente en blanco + 1 caso nuevo en CA-7, y frase de `new SMS(text, to, from)` alineada en la spec → backend 91/91 y frontend 36/36 (ejecutados por separado con `pnpm --filter`: en `pnpm test` el frontend se quedó sin memoria en Windows).
 
 ## Hallazgos durante la implementación
 
