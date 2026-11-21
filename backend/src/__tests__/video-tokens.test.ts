@@ -50,6 +50,26 @@ function makeIncident(options: FixtureOptions = {}): IncidentWithRelations {
     updatedAt: now,
   };
 
+  const tenant: User = {
+    id: "usr_tenant_demo",
+    name: "Inquilina Demo",
+    phone: "+34600000001",
+    email: null,
+    role: "TENANT",
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  const manager: User = {
+    id: "usr_manager_demo",
+    name: "Gestora Demo",
+    phone: "+34600000003",
+    email: null,
+    role: "MANAGER",
+    createdAt: now,
+    updatedAt: now,
+  };
+
   const videoSession: VideoSession = {
     id: "vs_demo",
     visitId: "visit_demo",
@@ -82,6 +102,8 @@ function makeIncident(options: FixtureOptions = {}): IncidentWithRelations {
     createdAt: now,
     updatedAt: now,
     technician,
+    tenant,
+    manager,
     visit,
   };
 }
