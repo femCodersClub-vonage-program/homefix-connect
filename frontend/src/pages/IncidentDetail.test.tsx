@@ -6,6 +6,22 @@ import type { IncidentDetailData } from '../api/incidents.js';
 import { makeIncidentFixture } from '../test/fixtures/incident.js';
 import IncidentDetail from './IncidentDetail.js';
 
+vi.mock('../components/VideoCall.js', () => ({
+  VideoCall: ({
+    applicationId,
+    sessionId,
+    token,
+  }: {
+    applicationId: string;
+    sessionId: string;
+    token: string;
+  }) => (
+    <div data-testid="video-call">
+      {applicationId}:{sessionId}:{token}
+    </div>
+  ),
+}));
+
 function renderPage(incidentId = 'inc_demo') {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -23,6 +39,56 @@ function mockIncident(data: IncidentDetailData) {
     ok: true,
     status: 200,
     json: async () => data,
+  });
+
+  vi.stubGlobal('fetch', fetchMock);
+  return fetchMock;
+}
+
+type MockApiOptions = {
+  token?: {
+    applicationId: string;
+    sessionId: string;
+    token: string;
+  };
+  tokenStatus?: number;
+  tokenPending?: boolean;
+  tokenNetworkError?: boolean;
+};
+
+function mockApi({
+  token = {
+    applicationId: 'app_demo',
+    sessionId: 'sess_demo',
+    token: 'token_demo',
+  },
+  tokenStatus = 200,
+  tokenPending = false,
+  tokenNetworkError = false,
+}: MockApiOptions = {}) {
+  const fetchMock = vi.fn((input: RequestInfo | URL) => {
+    if (String(input) === '/api/video-tokens') {
+      if (tokenPending) {
+        return new Promise<never>(() => undefined);
+      }
+      if (tokenNetworkError) {
+        return Promise.reject(new Error('offline'));
+      }
+
+      return Promise.resolve({
+        ok: tokenStatus >= 200 && tokenStatus < 300,
+        status: tokenStatus,
+        json: async () => (tokenStatus >= 200 && tokenStatus < 300
+          ? token
+          : { error: 'No se pudo generar el token' }),
+      });
+    }
+
+    return Promise.resolve({
+      ok: true,
+      status: 200,
+      json: async () => makeIncidentFixture(),
+    });
   });
 
   vi.stubGlobal('fetch', fetchMock);
@@ -147,5 +213,154 @@ describe('IncidentDetail', () => {
     fireEvent.click(technician);
 
     expect(technician).toBeChecked();
+  });
+});
+
+describe('IncidentDetail · entrada a la videollamada', () => {
+  it('pide el token y monta VideoCall con los datos recibidos', async () => {
+    const fetchMock = mockApi();
+    renderPage();
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: /entrar a la videollamada/i }),
+    );
+
+    expect(await screen.findByTestId('video-call')).toHaveTextContent(
+      'app_demo:sess_demo:token_demo',
+    );
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/video-tokens',
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({
+          'X-User-Id': 'usr_tenant_demo',
+          'X-User-Role': 'TENANT',
+        }),
+        body: JSON.stringify({ incidentId: 'inc_demo' }),
+      }),
+    );
+    expect(
+      screen.queryByRole('button', { name: /entrar a la videollamada/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('deshabilita el botón y muestra "Conectando…" mientras espera', async () => {
+    mockApi({ tokenPending: true });
+    renderPage();
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: /entrar a la videollamada/i }),
+    );
+
+    expect(
+      await screen.findByRole('button', { name: /conectando/i }),
+    ).toBeDisabled();
+  });
+
+  it('muestra el error de permiso y permite reintentar con 403', async () => {
+    mockApi({ tokenStatus: 403 });
+    renderPage();
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: /entrar a la videollamada/i }),
+    );
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      /no tienes permiso para entrar en esta videollamada/i,
+    );
+    expect(
+      screen.getByRole('button', { name: /entrar a la videollamada/i }),
+    ).toBeEnabled();
+  });
+
+  it('muestra "Incidencia no encontrada" si el token responde 404', async () => {
+    mockApi({ tokenStatus: 404 });
+    renderPage();
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: /entrar a la videollamada/i }),
+    );
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      /incidencia no encontrada/i,
+    );
+    expect(
+      screen.getByRole('button', { name: /entrar a la videollamada/i }),
+    ).toBeEnabled();
+  });
+
+  it('muestra el error de sesión no disponible con 409', async () => {
+    mockApi({ tokenStatus: 409 });
+    renderPage();
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: /entrar a la videollamada/i }),
+    );
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      /la videollamada ya no está disponible/i,
+    );
+  });
+
+  it('muestra un error genérico con 500', async () => {
+    mockApi({ tokenStatus: 500 });
+    renderPage();
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: /entrar a la videollamada/i }),
+    );
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      /no se pudo iniciar la videollamada/i,
+    );
+  });
+
+  it('muestra un error genérico si falla la red', async () => {
+    mockApi({ tokenNetworkError: true });
+    renderPage();
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: /entrar a la videollamada/i }),
+    );
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      /no se pudo iniciar la videollamada/i,
+    );
+  });
+
+  it('usa las cabeceras de la técnica al pedir el token', async () => {
+    const fetchMock = mockApi();
+    renderPage();
+
+    await screen.findByRole('heading', { name: /fuga de agua/i });
+    fireEvent.click(screen.getByRole('radio', { name: /técnica/i }));
+    fireEvent.click(
+      screen.getByRole('button', { name: /entrar a la videollamada/i }),
+    );
+
+    expect(await screen.findByTestId('video-call')).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/video-tokens',
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          'X-User-Id': 'usr_technician_demo',
+          'X-User-Role': 'TECHNICIAN',
+        }),
+        body: JSON.stringify({ incidentId: 'inc_demo' }),
+      }),
+    );
+  });
+
+  it('bloquea el selector de rol mientras hay una llamada montada', async () => {
+    mockApi();
+    renderPage();
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: /entrar a la videollamada/i }),
+    );
+
+    await screen.findByTestId('video-call');
+    expect(screen.getByRole('radio', { name: /inquilina/i })).toBeDisabled();
+    expect(screen.getByRole('radio', { name: /técnica/i })).toBeDisabled();
   });
 });
