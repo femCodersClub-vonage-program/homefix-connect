@@ -190,6 +190,9 @@ importers:
       '@prisma/client':
         specifier: ^6.16.0
         version: 6.19.3(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3)
+      '@vonage/messages':
+        specifier: 1.28.1
+        version: 1.28.1(supports-color@7.2.0)
       '@vonage/server-sdk':
         specifier: ^3.31.1
         version: 3.31.1(supports-color@7.2.0)
