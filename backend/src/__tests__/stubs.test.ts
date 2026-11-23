@@ -35,6 +35,16 @@ function makeIncident(
     updatedAt: now,
   };
 
+  const tenant: User = {
+    id: 'usr_tenant_demo',
+    name: 'Inquilina Demo',
+    phone: '+34600000001',
+    email: null,
+    role: 'TENANT',
+    createdAt: now,
+    updatedAt: now,
+  };
+
   const videoSession: VideoSession = {
     id: 'vs_demo',
     visitId: 'visit_demo',
@@ -67,6 +77,8 @@ function makeIncident(
     createdAt: now,
     updatedAt: now,
     technician,
+    tenant,
+    manager: null,
     visit,
     ...overrides,
   };

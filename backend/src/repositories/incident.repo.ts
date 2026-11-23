@@ -1,7 +1,13 @@
 import type { Incident, IncidentStatus, Prisma } from '@prisma/client';
 
 export type IncidentWithRelations = Prisma.IncidentGetPayload<{
-  include: { technician: true; visit: { include: { videoSession: true } } };
+  include: {
+    technician: true;
+    // B2: destinatarias del SMS post-visita (inquilina y gestora).
+    tenant: true;
+    manager: true;
+    visit: { include: { videoSession: true } };
+  };
 }>;
 
 export interface IncidentRepo {
