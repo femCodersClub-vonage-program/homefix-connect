@@ -1,6 +1,6 @@
 # B3 · Registros `Notification` + idempotencia del aviso post-visita — Especificación
 
-> Issue: #14 (confirmar) · Rama: `feat/B3-notifications` (stacked sobre `feat/B2-send-sms`) · Requisitos: `01-requirements.md` · Estado: borrador (decisiones Q1–Q6 cerradas, 21/11)
+> Issue: #14 (confirmar) · Rama: `feat/B3-notifications` · Requisitos: `01-requirements.md` · Estado: borrador (decisiones Q1–Q6 cerradas, 21/11)
 
 ## 1. Resumen y contexto
 

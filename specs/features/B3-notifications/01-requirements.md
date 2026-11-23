@@ -1,6 +1,6 @@
 # B3 · Registros `Notification` + idempotencia del aviso post-visita — Requisitos
 
-> Issue: #14 (confirmar) · Rama: `feat/B3-notifications` (stacked sobre `feat/B2-send-sms`, PR #44) · Depende de: B2 (#13, PR #44), X1 (interfaces y stubs)
+> Issue: #14 (confirmar) · Rama: `feat/B3-notifications` · Depende de: B2 (#13, PR #44), X1 (interfaces y stubs)
 
 ## 1. Requisitos clasificados
 
