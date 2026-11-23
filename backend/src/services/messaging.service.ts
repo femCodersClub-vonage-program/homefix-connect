@@ -11,6 +11,7 @@ import {
   VonageValidationError,
 } from '../lib/vonage-errors.js';
 import type { IncidentRepo } from '../repositories/incident.repo.js';
+import type { NotificationRepo } from '../repositories/notification.repo.js';
 
 export interface MessagingService {
   sendSms(to: string, body: string): Promise<{ providerMessageId: string }>;
@@ -47,10 +48,15 @@ export function buildPostVisitBody(title: string, technicianName: string): strin
 
 export type PostVisitRole = 'MANAGER' | 'TENANT';
 
+/** B3: valor de `Notification.template` y clave de idempotencia (con `incidentId`). */
+export const POST_VISIT_TEMPLATE_ID = 'post_visit';
+
+export type PostVisitSkipReason = 'NO_MANAGER' | 'ALREADY_SENT';
+
 export type PostVisitResult = {
   sent: { recipientId: string; role: PostVisitRole; providerMessageId: string }[];
   failed: { recipientId: string; role: PostVisitRole; error: string }[];
-  skipped: { role: 'MANAGER'; reason: 'NO_MANAGER' }[];
+  skipped: { role: PostVisitRole; reason: PostVisitSkipReason }[];
 };
 
 /** Lo que llama la A4 al terminar la videollamada (Q1: interface aparte de MessagingService). */
@@ -61,15 +67,19 @@ export interface PostVisitNotifier {
 export type MessagingPostVisitNotifierOptions = {
   messaging: MessagingService;
   incidentRepo: IncidentRepo;
+  /** B3: registros Notification e idempotencia. */
+  notificationRepo: NotificationRepo;
 };
 
 export class MessagingPostVisitNotifier implements PostVisitNotifier {
   private readonly messaging: MessagingService;
   private readonly incidentRepo: IncidentRepo;
+  private readonly notificationRepo: NotificationRepo;
 
   constructor(options: MessagingPostVisitNotifierOptions) {
     this.messaging = options.messaging;
     this.incidentRepo = options.incidentRepo;
+    this.notificationRepo = options.notificationRepo;
   }
 
   async sendPostVisit(
@@ -79,6 +89,17 @@ export class MessagingPostVisitNotifier implements PostVisitNotifier {
     const incident = await this.incidentRepo.findById(incidentId);
     if (!incident) {
       throw new Error(`Incident ${incidentId} not found`);
+    }
+
+    // B3 · Q3/Q4/Q5: si ya hay alguna Notification post_visit (en cualquier estado), no se envía nada.
+    if (await this.notificationRepo.existsForIncident(incidentId, POST_VISIT_TEMPLATE_ID)) {
+      const roles: PostVisitRole[] = incident.manager ? ['MANAGER', 'TENANT'] : ['TENANT'];
+      logger.info({ incidentId }, 'post-visit sms skipped: already sent');
+      return {
+        sent: [],
+        failed: [],
+        skipped: roles.map((role) => ({ role, reason: 'ALREADY_SENT' as const })),
+      };
     }
 
     // Q2: el parámetro manda; si llega vacío, el nombre de la técnica de la incidencia.
@@ -100,23 +121,43 @@ export class MessagingPostVisitNotifier implements PostVisitNotifier {
     }
     recipients.push({ role: 'TENANT', user: incident.tenant });
 
-    // Q4: si falla una, se sigue con la otra; los reintentos son de la B3.
+    // Q4: si falla una, se sigue con la otra. Sin reintentos (ADR-012): el fallo queda en FAILED.
+    // B3: tras cada SMS se guarda su Notification antes de pasar a la siguiente.
     for (const { role, user } of recipients) {
+      let providerMessageId: string;
       try {
-        const { providerMessageId } = await this.messaging.sendSms(user.phone, body);
-        result.sent.push({ recipientId: user.id, role, providerMessageId });
-        logger.info(
-          { incidentId, recipientId: user.id, role, providerMessageId },
-          'post-visit sms sent',
-        );
+        ({ providerMessageId } = await this.messaging.sendSms(user.phone, body));
       } catch (error) {
         const errorName = error instanceof Error ? error.name : 'UnknownError';
+        await this.notificationRepo.create({
+          incidentId,
+          recipientId: user.id,
+          template: POST_VISIT_TEMPLATE_ID,
+          status: 'FAILED',
+          error: errorName,
+          sentAt: null,
+        });
         result.failed.push({ recipientId: user.id, role, error: errorName });
         logger.error(
           { incidentId, recipientId: user.id, role, error: errorName },
           'post-visit sms failed',
         );
+        continue;
       }
+
+      await this.notificationRepo.create({
+        incidentId,
+        recipientId: user.id,
+        template: POST_VISIT_TEMPLATE_ID,
+        status: 'QUEUED',
+        providerMessageId,
+        sentAt: new Date(),
+      });
+      result.sent.push({ recipientId: user.id, role, providerMessageId });
+      logger.info(
+        { incidentId, recipientId: user.id, role, providerMessageId },
+        'post-visit sms sent',
+      );
     }
 
     return result;
