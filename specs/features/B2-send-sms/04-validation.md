@@ -14,8 +14,8 @@ frontend typecheck$ tsc --noEmit -p tsconfig.json → Done
 backend typecheck$ tsc --noEmit -p tsconfig.json  → Done
 
 $ pnpm test
-backend:  Test Files  7 passed (7) · Tests  73 passed (73)
-          (de ellos, 9 en src/__tests__/post-visit.test.ts)
+backend:  Test Files  9 passed (9) · Tests  100 passed (100)
+          (de ellos, 9 en src/__tests__/post-visit.test.ts; incluye los 27 de B1 tras git merge main)
 frontend: Test Files  5 passed (5) · Tests  36 passed (36)
 ```
 
@@ -41,6 +41,7 @@ frontend: Test Files  5 passed (5) · Tests  36 passed (36)
 3. Fase roja: `post-visit.test.ts` → 9 tests en rojo (`MessagingPostVisitNotifier is not a constructor`, `buildPostVisitBody is not a function`).
 4. Fase verde: plantilla, tipos, `PostVisitNotifier` y `MessagingPostVisitNotifier` en `messaging.service.ts` → 9/9 y 73/73.
 5. Pasos 2–4 subidos en un único commit: `feat(messaging): add sendPostVisit (B2)` (`6ad8a10`).
+6. 21/11, tras mergear el #43 (B1): `git merge main` (`ead5d37`). Conflicto en `messaging.service.ts` resuelto: un solo bloque de imports (un `logger`, más `IncidentRepo`) y las dos partes (B2 y B1). `pnpm check` OK · backend 100/100 · frontend 36/36 (`pnpm --filter`; en `pnpm test` el frontend se queda sin memoria en Windows).
 
 ## Hallazgos durante la implementación
 
@@ -50,6 +51,6 @@ frontend: Test Files  5 passed (5) · Tests  36 passed (36)
 
 ## Pendientes
 
-- Cuando se mergee el #43 (B1): `git merge main` en esta rama. Conflicto previsto en `messaging.service.ts` (las dos tareas añaden al final y las dos importan `logger`): dejar ambas partes y un solo import.
-- Guardar las `Notification`, idempotencia y reintentos: B3 (#14).
+- ~~Merge de `main` tras el #43 (B1)~~ ✅ hecho el 21/11 (ver paso 6).
+- Guardar las `Notification` e idempotencia (sin reintentos, ADR-012): B3.
 - Llamar a `sendPostVisit` desde `session.end` y crear el notifier real con `createVonageMessagesClient`: A4 (#10).
