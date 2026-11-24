@@ -53,4 +53,4 @@ Test Files  5 passed (5) · Tests  21 passed (21)
 
 - `tests/unit/` ← `vonage-video.service.test.ts` · `tests/contract/` ← `video-tokens` y `video-events` (Supertest) · `tests/fixtures/vonage-video/` con los payloads oficiales.
 - `pnpm test` → 11 files · **128 passed** (124 + 4 casos nuevos del webhook). `pnpm check` OK.
-- `test:integration`: los 13 de la A5 en verde con el payload oficial (verificación local). Pendiente repetir con Docker en Windows.
+- `test:integration` en Windows con Docker: 5 files · **21 passed** (8 B5 + 13 A5), con el payload oficial.
