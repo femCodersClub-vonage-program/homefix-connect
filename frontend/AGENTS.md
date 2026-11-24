@@ -69,10 +69,16 @@ hook.
 - El token **lo genera el backend**. El frontend nunca ve `VONAGE_API_SECRET` ni
   la private key.
 - Inicializa el SDK en un `useEffect` y **limpia siempre** en el `return`
-  (`session.disconnect()`, `publisher.destroy()`, parar tracks). Si no se limpia,
-  la cámara se queda encendida.
+  (`session.unsubscribe()`, `session.unpublish()`, `publisher.destroy()`,
+  `session.disconnect()` y `off` de los listeners). Si no se limpia, la cámara se
+  queda encendida.
 - Estado mínimo explícito: `idle | connecting | connected | error | ended`.
-- Maneja `session.end` / `session.disconnected` sin dejar la UI colgada.
+  El texto de `ended` es "Desconectada".
+- C4 escucha `streamCreated` / `streamDestroyed`: suscribe el vídeo remoto en su
+  propio `<div ref>`, nunca en el contenedor local, y muestra
+  "Esperando a la otra persona…" mientras no llega ese stream.
+- Maneja `sessionDisconnected` / `connectionDestroyed` / `streamDestroyed` sin
+  dejar la UI colgada. No hay reconexión automática ni timeout en el MVP.
 - Los tests **no** abren cámara ni red: se mockea el SDK.
 
 ## 6. Estilos
