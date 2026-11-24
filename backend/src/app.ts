@@ -9,11 +9,18 @@ import { logger } from './lib/logger.js';
 import { captureRawBody } from './lib/rawBody.js';
 import type { IncidentRepo } from './repositories/incident.repo.js';
 import { PrismaIncidentRepo } from './repositories/prisma-incident.repo.js';
+import { PrismaNotificationRepo } from './repositories/prisma-notification.repo.js';
 import { PrismaVideoSessionRepo } from './repositories/prisma-video-session.repo.js';
 import type { VideoSessionRepo } from './repositories/video-session.repo.js';
 import { healthRouter } from './routes/health.js';
 import { incidentsRouter } from './routes/incidents.js';
+import { createVideoEventsRouter } from './routes/video-events.js';
 import { createVideoTokensRouter } from './routes/video-tokens.js';
+import {
+  createVonageMessagesClient,
+  MessagingPostVisitNotifier,
+  type PostVisitNotifier,
+} from './services/messaging.service.js';
 import type { VideoService } from './services/video.service.js';
 import { createVonageVideoService } from './services/vonage-video.service.js';
 
@@ -23,6 +30,10 @@ export type AppDeps = {
   videoSessionRepo?: VideoSessionRepo;
   videoService?: VideoService;
   applicationId?: string;
+  /** A4: aviso post-visita (SMS + Notification). */
+  postVisitNotifier?: PostVisitNotifier;
+  /** A4: secreto de firma de webhooks (los tests inyectan uno). */
+  getSignatureSecret?: () => string | undefined;
 };
 
 export function createApp(deps: AppDeps = {}) {
@@ -37,6 +48,19 @@ export function createApp(deps: AppDeps = {}) {
       privateKeyPath: env.VONAGE_PRIVATE_KEY_PATH,
     });
   const applicationId = deps.applicationId ?? env.VONAGE_APPLICATION_ID;
+  // A4: B1 (cliente Vonage Messages) + B2/B3 (sendPostVisit + Notification).
+  // Sin credenciales arranca igual: los SMS quedan en FAILED.
+  const postVisitNotifier =
+    deps.postVisitNotifier ??
+    new MessagingPostVisitNotifier({
+      messaging: createVonageMessagesClient({
+        applicationId: env.VONAGE_APPLICATION_ID,
+        privateKeyPath: env.VONAGE_PRIVATE_KEY_PATH,
+        from: env.VONAGE_MESSAGES_FROM,
+      }),
+      incidentRepo,
+      notificationRepo: new PrismaNotificationRepo(prisma),
+    });
 
   const app = express();
 
@@ -62,6 +86,16 @@ export function createApp(deps: AppDeps = {}) {
       videoSessionRepo,
       videoService,
       applicationId,
+    }),
+  );
+
+  app.use(
+    '/api',
+    createVideoEventsRouter({
+      incidentRepo,
+      videoSessionRepo,
+      postVisitNotifier,
+      getSignatureSecret: deps.getSignatureSecret,
     }),
   );
 
