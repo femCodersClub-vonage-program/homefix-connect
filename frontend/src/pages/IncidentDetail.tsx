@@ -6,8 +6,10 @@ import type {
   UserRole,
   VisitStatus,
 } from '../api/incidents.js';
+import { FinishToast } from '../components/FinishToast.js';
 import { JoinButton } from '../components/JoinButton.js';
 import { VideoCall } from '../components/VideoCall.js';
+import { useFinishToast } from '../hooks/useFinishToast.js';
 import { useIncident } from '../hooks/useIncident.js';
 import { useVideoToken } from '../hooks/useVideoToken.js';
 
@@ -58,6 +60,7 @@ export default function IncidentDetail({ incidentId }: { incidentId: string }) {
   const [role, setRole] = useState<UserRole>('TENANT');
   const incident = useIncident(incidentId, role);
   const videoToken = useVideoToken(incidentId, role);
+  const showFinishToast = useFinishToast(incident.data?.status);
 
   function changeRole(nextRole: UserRole) {
     videoToken.reset();
@@ -85,6 +88,7 @@ export default function IncidentDetail({ incidentId }: { incidentId: string }) {
 
   return (
     <main className="app">
+      <FinishToast open={showFinishToast} />
       <h1>{data.title}</h1>
       <p className="subtitle">{data.description ?? 'Sin descripción'}</p>
 

@@ -23,8 +23,8 @@ frontend/
     ├── api/generated/       # tipos generados desde openapi.yaml (C1)
     ├── api/incidents.ts     # tipos generados + getIncident (C1/C2)
     ├── api/video.ts         # requestVideoToken (C3)
-    ├── components/          # JoinButton (C2), VideoCall (C3)
-    ├── hooks/               # useIncident (C2), useVideoToken/useVideoCall (C3)
+    ├── components/          # JoinButton (C2), VideoCall (C3/C4), FinishToast (C5)
+    ├── hooks/               # useIncident (C2/C5), useVideoToken/useVideoCall (C3/C4), useFinishToast (C5)
     ├── pages/               # IncidentDetail (C2/C3)
     ├── index.css            # estilos base y stage de vídeo
     └── test/
@@ -80,6 +80,9 @@ hook.
 - Maneja `sessionDisconnected` / `connectionDestroyed` / `streamDestroyed` sin
   dejar la UI colgada. No hay reconexión automática ni timeout en el MVP.
 - Los tests **no** abren cámara ni red: se mockea el SDK.
+- C5 detecta la transición a `VIDEO_COMPLETED` con `useFinishToast` y muestra
+  `FinishToast` durante 5 s. `useIncident` consulta cada 5 s hasta que la
+  incidencia se completa. Sin librería de toast.
 
 ## 6. Estilos
 

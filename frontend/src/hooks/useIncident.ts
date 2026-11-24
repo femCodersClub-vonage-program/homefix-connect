@@ -6,5 +6,7 @@ export function useIncident(incidentId: string, role: UserRole) {
   return useQuery({
     queryKey: ['incident', incidentId],
     queryFn: () => getIncident(incidentId, role),
+    refetchInterval: (query) =>
+      query.state.data?.status === 'VIDEO_COMPLETED' ? false : 5_000,
   });
 }
