@@ -20,10 +20,10 @@ afterAll(async () => {
 
 describe('PrismaNotificationRepo (integración)', () => {
   it('INT-1 · usa la BD de test', async () => {
-    const [{ current_database }] = await prisma.$queryRaw<
+    const [row] = await prisma.$queryRaw<
       { current_database: string }[]
     >`SELECT current_database()`;
-    expect(current_database.endsWith('_test')).toBe(true);
+    expect(row?.current_database).toMatch(/_test$/);
   });
 
   it('INT-1 · create QUEUED guarda la fila con channel SMS y fechas', async () => {
