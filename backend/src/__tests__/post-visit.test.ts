@@ -1,10 +1,11 @@
-import type { User } from '@prisma/client';
+import type { Notification, User } from '@prisma/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   InMemoryIncidentRepo,
   type IncidentWithRelations,
 } from '../repositories/incident.repo.js';
+import { InMemoryNotificationRepo } from '../repositories/notification.repo.js';
 import {
   buildPostVisitBody,
   type MessagingService,
@@ -70,11 +71,36 @@ function makeMessaging(): MessagingService & { sendSms: ReturnType<typeof vi.fn>
   };
 }
 
-function setup(incident: IncidentWithRelations = makeIncident()) {
+function setup(
+  incident: IncidentWithRelations = makeIncident(),
+  notifications: Notification[] = [],
+) {
   const messaging = makeMessaging();
   const incidentRepo = new InMemoryIncidentRepo([incident]);
-  const notifier = new MessagingPostVisitNotifier({ messaging, incidentRepo });
-  return { messaging, notifier };
+  const notificationRepo = new InMemoryNotificationRepo(notifications);
+  const notifier = new MessagingPostVisitNotifier({
+    messaging,
+    incidentRepo,
+    notificationRepo,
+  });
+  return { messaging, notifier, notificationRepo };
+}
+
+function makeNotification(overrides: Partial<Notification> = {}): Notification {
+  return {
+    id: 'ntf_previa',
+    incidentId: 'inc_demo',
+    recipientId: TENANT.id,
+    channel: 'SMS',
+    status: 'QUEUED',
+    template: 'post_visit',
+    providerMessageId: 'msg-anterior',
+    error: null,
+    sentAt: now,
+    createdAt: now,
+    updatedAt: now,
+    ...overrides,
+  };
 }
 
 beforeEach(() => {
@@ -205,5 +231,164 @@ describe('MessagingPostVisitNotifier.sendPostVisit', () => {
     expect(logged).not.toContain(EXPECTED_BODY);
     expect(logged).not.toContain(TITLE);
     expect(logged).not.toContain('60000000');
+  });
+});
+
+// B3 · Registros Notification + idempotencia (fase roja).
+// Spec: specs/features/B3-notifications/02-specification.md (CA-1 a CA-8).
+describe('MessagingPostVisitNotifier.sendPostVisit · Notification (B3)', () => {
+  it('B3 CA-1 · crea 2 Notification QUEUED con template, recipientId, providerMessageId y sentAt', async () => {
+    const { notifier, notificationRepo } = setup();
+
+    await notifier.sendPostVisit('inc_demo', TECHNICIAN_NAME);
+
+    expect(notificationRepo.items).toHaveLength(2);
+    expect(notificationRepo.items).toEqual([
+      expect.objectContaining({
+        incidentId: 'inc_demo',
+        recipientId: MANAGER.id,
+        template: 'post_visit',
+        channel: 'SMS',
+        status: 'QUEUED',
+        providerMessageId: 'msg-gestora',
+        error: null,
+        sentAt: expect.any(Date),
+      }),
+      expect.objectContaining({
+        incidentId: 'inc_demo',
+        recipientId: TENANT.id,
+        template: 'post_visit',
+        status: 'QUEUED',
+        providerMessageId: 'msg-inquilina',
+        sentAt: expect.any(Date),
+      }),
+    ]);
+  });
+
+  it('B3 CA-2 · ya enviado: no llama a sendSms, no crea nada y devuelve ALREADY_SENT', async () => {
+    const { messaging, notifier, notificationRepo } = setup(makeIncident(), [
+      makeNotification(),
+    ]);
+
+    const result = await notifier.sendPostVisit('inc_demo', TECHNICIAN_NAME);
+
+    expect(messaging.sendSms).not.toHaveBeenCalled();
+    expect(notificationRepo.items).toHaveLength(1);
+    expect(result).toEqual({
+      sent: [],
+      failed: [],
+      skipped: [
+        { role: 'MANAGER', reason: 'ALREADY_SENT' },
+        { role: 'TENANT', reason: 'ALREADY_SENT' },
+      ],
+    });
+    expect(logInfo).toHaveBeenCalled();
+  });
+
+  it('B3 CA-2 · ya enviado y sin gestora: solo la inquilina en ALREADY_SENT', async () => {
+    const { notifier } = setup(makeIncident({ managerId: null, manager: null }), [
+      makeNotification(),
+    ]);
+
+    const result = await notifier.sendPostVisit('inc_demo', TECHNICIAN_NAME);
+
+    expect(result.skipped).toEqual([{ role: 'TENANT', reason: 'ALREADY_SENT' }]);
+  });
+
+  it('B3 CA-3 · dos llamadas seguidas: 2 SMS en total y 2 Notification', async () => {
+    const { messaging, notifier, notificationRepo } = setup();
+
+    await notifier.sendPostVisit('inc_demo', TECHNICIAN_NAME);
+    await notifier.sendPostVisit('inc_demo', TECHNICIAN_NAME);
+
+    expect(messaging.sendSms).toHaveBeenCalledTimes(2);
+    expect(notificationRepo.items).toHaveLength(2);
+  });
+
+  it('B3 CA-4 · falla el SMS de la gestora: su Notification en FAILED y la de la inquilina en QUEUED', async () => {
+    const { messaging, notifier, notificationRepo } = setup();
+    messaging.sendSms
+      .mockReset()
+      .mockRejectedValueOnce(
+        Object.assign(new Error('Vonage caído'), { name: 'VonageNetworkError' }),
+      )
+      .mockResolvedValueOnce({ providerMessageId: 'msg-inquilina' });
+
+    await notifier.sendPostVisit('inc_demo', TECHNICIAN_NAME);
+
+    expect(notificationRepo.items).toEqual([
+      expect.objectContaining({
+        recipientId: MANAGER.id,
+        status: 'FAILED',
+        error: 'VonageNetworkError',
+        providerMessageId: null,
+        sentAt: null,
+      }),
+      expect.objectContaining({
+        recipientId: TENANT.id,
+        status: 'QUEUED',
+        providerMessageId: 'msg-inquilina',
+      }),
+    ]);
+  });
+
+  it('B3 CA-5 · con una Notification FAILED previa no se reenvía', async () => {
+    const { messaging, notifier } = setup(makeIncident(), [
+      makeNotification({ status: 'FAILED', providerMessageId: null, sentAt: null, error: 'VonageNetworkError' }),
+    ]);
+
+    const result = await notifier.sendPostVisit('inc_demo', TECHNICIAN_NAME);
+
+    expect(messaging.sendSms).not.toHaveBeenCalled();
+    expect(result.skipped.every((s) => s.reason === 'ALREADY_SENT')).toBe(true);
+  });
+
+  it('B3 CA-6 · sin gestora: solo la Notification de la inquilina y NO_MANAGER', async () => {
+    const { messaging, notifier, notificationRepo } = setup(
+      makeIncident({ managerId: null, manager: null }),
+    );
+    messaging.sendSms.mockReset().mockResolvedValue({ providerMessageId: 'msg-inquilina' });
+
+    const result = await notifier.sendPostVisit('inc_demo', TECHNICIAN_NAME);
+
+    expect(notificationRepo.items).toHaveLength(1);
+    expect(notificationRepo.items[0]).toMatchObject({ recipientId: TENANT.id, status: 'QUEUED' });
+    expect(result.skipped).toEqual([{ role: 'MANAGER', reason: 'NO_MANAGER' }]);
+  });
+
+  it('B3 CA-7 · incidencia inexistente: lanza, no envía ni crea nada', async () => {
+    const { messaging, notifier, notificationRepo } = setup();
+
+    await expect(notifier.sendPostVisit('no-existe', TECHNICIAN_NAME)).rejects.toThrow(
+      'no-existe',
+    );
+    expect(messaging.sendSms).not.toHaveBeenCalled();
+    expect(notificationRepo.items).toHaveLength(0);
+  });
+
+  it('B3 CA-8 · ni los logs ni Notification.error llevan teléfonos ni el texto del SMS', async () => {
+    const { messaging, notifier, notificationRepo } = setup();
+    messaging.sendSms
+      .mockReset()
+      .mockRejectedValueOnce(
+        Object.assign(new Error(`falló ${MANAGER.phone}: ${EXPECTED_BODY}`), {
+          name: 'VonageNetworkError',
+        }),
+      )
+      .mockResolvedValueOnce({ providerMessageId: 'msg-inquilina' });
+
+    await notifier.sendPostVisit('inc_demo', TECHNICIAN_NAME);
+
+    const stored = JSON.stringify(notificationRepo.items.map((n) => n.error));
+    const logged = JSON.stringify([
+      ...logInfo.mock.calls,
+      ...logWarn.mock.calls,
+      ...logError.mock.calls,
+    ]);
+    expect(notificationRepo.items).toHaveLength(2);
+    for (const text of [stored, logged]) {
+      expect(text).not.toContain(TITLE);
+      expect(text).not.toContain('60000000');
+    }
   });
 });
