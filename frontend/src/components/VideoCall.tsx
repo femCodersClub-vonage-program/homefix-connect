@@ -16,7 +16,7 @@ const statusLabels: Record<VideoCallStatus, string> = {
   connecting: 'Conectando…',
   connected: 'Conectada',
   error: 'No se pudo iniciar la videollamada',
-  ended: 'Videollamada finalizada',
+  ended: 'Desconectada',
 };
 
 export function VideoCall({
@@ -25,11 +25,13 @@ export function VideoCall({
   token,
 }: VideoCallProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const status = useVideoCall({
+  const remoteContainerRef = useRef<HTMLDivElement>(null);
+  const { status, remoteConnected } = useVideoCall({
     applicationId,
     sessionId,
     token,
     containerRef,
+    remoteContainerRef,
   });
 
   return (
@@ -43,6 +45,18 @@ export function VideoCall({
         {statusLabels[status]}
       </p>
       <div className="video-call__stage">
+        <div className="video-call__remote-wrap">
+          <div
+            ref={remoteContainerRef}
+            className="video-call__remote"
+            aria-label="Vídeo remoto"
+          />
+          {status === 'connected' && !remoteConnected ? (
+            <p className="video-call__waiting">
+              Esperando a la otra persona…
+            </p>
+          ) : null}
+        </div>
         <div
           ref={containerRef}
           className="video-call__local"
