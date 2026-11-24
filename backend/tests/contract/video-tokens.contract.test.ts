@@ -12,13 +12,13 @@ import { describe, expect, it, vi } from "vitest";
 import {
     InMemoryIncidentRepo,
     type IncidentWithRelations,
-} from "../repositories/incident.repo.js";
-import { InMemoryVideoSessionRepo } from "../repositories/video-session.repo.js";
-import { InMemoryVideoService } from "../services/video.service.js";
+} from "../../src/../src/repositories/incident.repo.js";
+import { InMemoryVideoSessionRepo } from "../../src/repositories/video-session.repo.js";
+import { InMemoryVideoService } from "../../src/services/video.service.js";
 
-vi.mock("../db/client.js", () => ({ prisma: {} }));
+vi.mock("../../src/db/client.js", () => ({ prisma: {} }));
 
-const { createApp } = await import("../app.js");
+const { createApp } = await import("../../src/app.js");
 
 const APP_ID = "test-app-id";
 

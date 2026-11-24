@@ -11,23 +11,24 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   InMemoryIncidentRepo,
   type IncidentWithRelations,
-} from "../repositories/incident.repo.js";
-import { InMemoryVideoSessionRepo } from "../repositories/video-session.repo.js";
+} from "../../src/../src/repositories/incident.repo.js";
+import { InMemoryVideoSessionRepo } from "../../src/repositories/video-session.repo.js";
 import type {
   PostVisitNotifier,
   PostVisitResult,
-} from "../services/messaging.service.js";
-import { InMemoryVideoService } from "../services/video.service.js";
-import { signVonageJwt, TEST_SECRET } from "./helpers/vonageJwt.js";
+} from "../../src/../src/services/messaging.service.js";
+import { InMemoryVideoService } from "../../src/services/video.service.js";
+import { signVonageJwt, TEST_SECRET } from "../../src/__tests__/helpers/vonageJwt.js";
+import { vonageVideoEvent, vonageVideoEventBody } from "../fixtures/vonage-video/index.js";
 
 // A4 · POST /api/webhooks/video-events — tests (fase roja).
 // Spec: specs/features/A4-video-webhook/02-specification.md (CA-1 a CA-9).
 // Repos en memoria, notifier falso y firma real (X3): sin Postgres ni Vonage.
 
-vi.mock("../db/client.js", () => ({ prisma: {} }));
+vi.mock("../../src/db/client.js", () => ({ prisma: {} }));
 
-const { createApp } = await import("../app.js");
-const { logger } = await import("../lib/logger.js");
+const { createApp } = await import("../../src/app.js");
+const { logger } = await import("../../src/lib/logger.js");
 
 // Espías sobre el logger real (pino-http necesita un pino de verdad).
 const logInfo = vi.spyOn(logger, "info");
@@ -121,18 +122,20 @@ function setup(options: FixtureOptions = {}) {
   return { app, incidentRepo, videoSessionRepo, postVisitNotifier };
 }
 
+// Payloads con la estructura oficial de Vonage (tests/fixtures/vonage-video).
 function event(payload: Record<string, unknown>): string {
-  return JSON.stringify({
-    projectId: "123456",
-    timestamp: 1_700_000_000_000,
-    ...payload,
-  });
+  return vonageVideoEventBody("session-destroyed", payload);
 }
 
-const SESSION_DESTROYED = event({
+/** El payload oficial de sessionDestroyed sin algunos campos (casos inválidos). */
+function eventWithout(...keys: string[]): string {
+  const payload = vonageVideoEvent("session-destroyed", { sessionId: VONAGE_SESSION_ID });
+  for (const key of keys) delete payload[key];
+  return JSON.stringify(payload);
+}
+
+const SESSION_DESTROYED = vonageVideoEventBody("session-destroyed", {
   sessionId: VONAGE_SESSION_ID,
-  event: "sessionDestroyed",
-  reason: "clientDisconnected",
 });
 
 function post(app: ReturnType<typeof createApp>, body: string, token = signVonageJwt(body)) {
@@ -183,7 +186,7 @@ describe("POST /api/webhooks/video-events", () => {
 
     const res = await post(
       app,
-      event({ sessionId: VONAGE_SESSION_ID, event: "connectionDestroyed", reason: "clientDisconnected" }),
+      vonageVideoEventBody("connection-destroyed", { sessionId: VONAGE_SESSION_ID }),
     );
 
     expect(res.status).toBe(200);
@@ -195,10 +198,23 @@ describe("POST /api/webhooks/video-events", () => {
     expect((await incidentRepo.findById("inc_demo"))?.status).toBe("VISIT_ASSIGNED");
   });
 
+  it.each(["session-created", "stream-created"] as const)(
+    "CA-2 · otro evento oficial (%s) → 200 ignored sin SMS",
+    async (fixture) => {
+      const { app, postVisitNotifier } = setup();
+
+      const res = await post(app, vonageVideoEventBody(fixture, { sessionId: VONAGE_SESSION_ID }));
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ status: "ignored" });
+      expect(postVisitNotifier.sendPostVisit).not.toHaveBeenCalled();
+    },
+  );
+
   it("CA-3 · sin event → 400", async () => {
     const { app } = setup();
 
-    const res = await post(app, event({ sessionId: VONAGE_SESSION_ID }));
+    const res = await post(app, eventWithout("event"));
 
     expect(res.status).toBe(400);
   });
@@ -206,7 +222,7 @@ describe("POST /api/webhooks/video-events", () => {
   it("CA-3 · sessionDestroyed sin sessionId → 400", async () => {
     const { app, postVisitNotifier } = setup();
 
-    const res = await post(app, event({ event: "sessionDestroyed" }));
+    const res = await post(app, eventWithout("sessionId"));
 
     expect(res.status).toBe(400);
     expect(postVisitNotifier.sendPostVisit).not.toHaveBeenCalled();
@@ -240,17 +256,17 @@ describe("POST /api/webhooks/video-events", () => {
     expect(postVisitNotifier.sendPostVisit).toHaveBeenCalledWith("inc_demo", "");
   });
 
-  it("CA-5 · también cierra con reason distinto (mediaIdle)", async () => {
-    const { app, postVisitNotifier } = setup();
+  it.each(["forceDisconnected", "mediaIdle", "serverRotation"])(
+    "CA-5 · también cierra con los otros reason oficiales (%s)",
+    async (reason) => {
+      const { app, postVisitNotifier } = setup();
 
-    const res = await post(
-      app,
-      event({ sessionId: VONAGE_SESSION_ID, event: "sessionDestroyed", reason: "mediaIdle" }),
-    );
+      const res = await post(app, event({ sessionId: VONAGE_SESSION_ID, reason }));
 
-    expect(res.body).toEqual({ status: "processed" });
-    expect(postVisitNotifier.sendPostVisit).toHaveBeenCalledTimes(1);
-  });
+      expect(res.body).toEqual({ status: "processed" });
+      expect(postVisitNotifier.sendPostVisit).toHaveBeenCalledTimes(1);
+    },
+  );
 
   it("CA-6 · el mismo sessionDestroyed dos veces: la segunda already_processed y 1 sola llamada", async () => {
     const { app, postVisitNotifier } = setup();

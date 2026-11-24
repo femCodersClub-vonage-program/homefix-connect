@@ -3,6 +3,7 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { prisma } from '../../src/db/client.js';
 import { signVonageJwt } from '../../src/__tests__/helpers/vonageJwt.js';
+import { vonageVideoEvent } from '../fixtures/vonage-video/index.js';
 import { IDS, resetDatabase } from './helpers/db.js';
 import {
   createVideoTestApp,
@@ -26,13 +27,9 @@ function sendEvent(app: App, payload: Record<string, unknown>) {
     .send(body);
 }
 
-const sessionDestroyed = (sessionId: string = VIDEO_IDS.vonageSession) => ({
-  event: 'sessionDestroyed',
-  sessionId,
-  reason: 'clientDisconnected',
-  projectId: 'app-test',
-  timestamp: 1_796_000_000_000,
-});
+// Payload oficial de Vonage (tests/fixtures/vonage-video) con la sala del test.
+const sessionDestroyed = (sessionId: string = VIDEO_IDS.vonageSession) =>
+  vonageVideoEvent('session-destroyed', { sessionId });
 
 async function dbState() {
   const [session, incident, notifications] = await Promise.all([

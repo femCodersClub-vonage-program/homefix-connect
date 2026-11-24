@@ -4,7 +4,7 @@ import {
   createVonageVideoService,
   type VonageVideoClient,
   VonageVideoService,
-} from '../services/vonage-video.service.js';
+} from '../../src/services/vonage-video.service.js';
 
 // A2 · VonageVideoService — tests unitarios (fase roja).
 // Spec: specs/features/A2-video-service/02-specification.md (CA-01 a CA-06).
