@@ -1,0 +1,12 @@
+{
+  "sessionId": "2_MX4xMDBfjE0Mzc2NzY1NDgwMTJ-TjMzfn4",
+  "projectId": "123456",
+  "event": "connectionDestroyed",
+  "reason": "clientDisconnected",
+  "timestamp": 1470258896953,
+  "connection": {
+    "id": "c053fcc8-c681-41d5-8ec2-7a9e1434a21e",
+    "createdAt": 1470257688143,
+    "data": ""
+  }
+}
