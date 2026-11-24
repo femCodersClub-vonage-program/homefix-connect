@@ -16,14 +16,25 @@ $ pnpm --filter backend test:integration
 (+ los 8 de la B5)
 ```
 
-> ⚠️ La ejecución de `test:integration` del 24/11 se hizo en un entorno sin Docker ni binarios de Prisma: Postgres 16 local y el cliente de Prisma con driver adapter (`@prisma/adapter-pg`), **solo para verificar, sin commitear nada de eso**. Los 13 tests de la A5 pasaron. Falta repetirlo en Windows con Docker (`homefix-db`) antes de marcar el PR como listo.
+Confirmado en local (Windows, PowerShell, Docker Desktop con `homefix-db`), 24/11 13:31:
+
+```text
+$ docker compose up -d
+$ pnpm --filter backend test:integration
+✓ tests/integration/video-events.int.test.ts (5 tests)
+✓ tests/integration/post-visit.int.test.ts (4 tests)
+✓ tests/integration/video-tokens.int.test.ts (4 tests)
+✓ tests/integration/notification.repo.int.test.ts (4 tests)
+✓ tests/integration/video-session.repo.int.test.ts (4 tests)
+Test Files  5 passed (5) · Tests  21 passed (21)
+```
 
 ## Criterios de aceptación
 
 | Criterio | Evidencia | Resultado |
 |---|---|---|
 | CA-1 · `pnpm test` intacto | 124/124, igual que la rama base | ✅ |
-| CA-2 · `test:integration` pasa (B5 + A5) | 13/13 de la A5 en verificación local; falta confirmarlo con Docker | ⏳ |
+| CA-2 · `test:integration` pasa (B5 + A5) | 21/21 con Docker en Windows (8 B5 + 13 A5) | ✅ |
 | CA-3 · Repetible | Dos ejecuciones seguidas en verde | ✅ |
 | CA-4 · Detecta fallos | Quitando la idempotencia de `video-events.ts`, INT-V10 falla; restaurado, pasa | ✅ |
 | CA-5 · `pnpm check` | OK | ✅ |
@@ -35,6 +46,5 @@ $ pnpm --filter backend test:integration
 
 ## Pendiente
 
-- Repetir `test:integration` con Docker en Windows.
 - Q1 (contrato/Pact) en el sync del 24/11.
 - Publicar Q1–Q6 en el #11.
