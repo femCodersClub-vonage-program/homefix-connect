@@ -17,6 +17,10 @@ Usa la capa de integración de la B5 (`pnpm --filter backend test:integration`, 
 - `backend/tests/integration/video-tokens.int.test.ts` (INT-V5 a INT-V8).
 - `backend/tests/integration/video-events.int.test.ts` (INT-V9 a INT-V13).
 
+- `backend/tests/unit/vonage-video.service.test.ts` (movido de `src/__tests__/`).
+- `backend/tests/contract/video-tokens.contract.test.ts` y `video-events.contract.test.ts` (movidos de `src/__tests__/`; Supertest). El webhook usa los payloads oficiales y añade: `sessionCreated`/`streamCreated` → `ignored`, y los `reason` `forceDisconnected`, `mediaIdle`, `serverRotation` → `processed`.
+- `backend/tests/fixtures/vonage-video/`: payloads de Session Monitoring (estructura de la doc oficial) + `index.ts` para cargarlos.
+
 **No entra:** ver `01-requirements.md` §4.
 
 ## 3. Requisitos funcionales
@@ -49,7 +53,7 @@ Usa la capa de integración de la B5 (`pnpm --filter backend test:integration`, 
 
 ## 5. Criterios de aceptación
 
-- **CA-1** · `pnpm test` sigue igual (124 en la rama, sin Docker).
+- **CA-1** · `pnpm test` (unit + contract) pasa sin Docker: 128 (124 + 4 casos nuevos del webhook).
 - **CA-2** · `pnpm --filter backend test:integration` pasa: 8 de la B5 + 13 de la A5.
 - **CA-3** · Repetible: dos ejecuciones seguidas en verde.
 - **CA-4** · Los tests detectan fallos reales: si se quita la comprobación de idempotencia del webhook, INT-V10 falla.

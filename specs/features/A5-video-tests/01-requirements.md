@@ -39,18 +39,23 @@
 
 | #  | Pregunta | Propuesta |
 | -- | -------- | --------- |
-| Q1 | ¿Qué parte de «contract» entra? | **Ninguna en este PR.** Pact queda para el equipo (dependencia nueva + §12). Se pregunta en el sync del 24/11 si se hace en otra tarea o se da por cubierto con OpenAPI + integración |
-| Q2 | ¿Se añaden unitarios? | **No**: ya están (D-01). Si al integrar sale un hueco, se añade |
+| Q1 | ¿Qué parte de «contract» entra? | **Supertest**, como dice el issue («Supertest vale; Pact si hay consumidor externo»). No hay consumidor externo → sin Pact. Los tests de ruta de A3/A4 pasan a `tests/contract/` |
+| Q2 | ¿Dónde van los unitarios? | En `tests/unit/`, como pide el issue: se mueve `vonage-video.service.test.ts` (A2) |
 | Q3 | ¿De dónde sale la rama? | De `feat/A4-video-webhook` con `test/B5-messaging` mergeada (necesita el código de la A4 y la infra de la B5) |
 | Q4 | ¿Qué se sustituye? | Solo lo externo: Vonage Video (`VideoService` falso), Vonage Messages (`MessagingService` falso) y el secreto de firma (de test). Rutas, repos y `sendPostVisit` son los reales |
 | Q5 | ¿Se toca la infra de la B5? | **No.** Helper nuevo `helpers/video.ts`; se reutilizan `IDS` y `resetDatabase` |
 | Q6 | ¿CI? | No (igual que B5: no hay Postgres en CI) |
 
-Pendiente: confirmación de Carolina y publicarlas en el #11.
+| Q7 | ¿Se mueven también los tests de otros carriles? | **No**: solo los de vídeo (alcance de la A5) |
+| Q8 | «Todos pasan en `pnpm --filter backend test`» | `pnpm test` = unit + contract (sin Docker). La integración sigue en `test:integration` (B5): la CI ejecuta `pnpm test` sin Postgres. Añadir Postgres a la CI se propone como mejora aparte |
+| Q9 | Fixtures de Vonage | `tests/fixtures/vonage-video/`: `sessionCreated`, `sessionDestroyed`, `connectionDestroyed`, `streamCreated` con la estructura de la doc oficial de Session Monitoring |
+
+Q1–Q9 decididas por Carolina el 24/11 («hazlo como pidió Mariellys»), publicadas en el #11. Se aparta de `AGENTS.md` §10 (unitarios en `src/**`, contrato con Pact) porque manda el issue; avisado en el PR.
 
 ## 4. Fuera de alcance
 
-- Pact / contract tests (Q1).
+- Pact (Q1).
+- Mover los tests de mensajería, X3 o incidents (Q7).
 - Vonage real (llamadas, SMS) y E2E con Playwright → I1.
 - Postgres en CI.
 - Cambios en `src/`.

@@ -48,3 +48,9 @@ Test Files  5 passed (5) · Tests  21 passed (21)
 
 - Q1 (contrato/Pact) en el sync del 24/11.
 - Publicar Q1–Q6 en el #11.
+
+## Cambio 24/11 (tarde): estructura del issue #11
+
+- `tests/unit/` ← `vonage-video.service.test.ts` · `tests/contract/` ← `video-tokens` y `video-events` (Supertest) · `tests/fixtures/vonage-video/` con los payloads oficiales.
+- `pnpm test` → 11 files · **128 passed** (124 + 4 casos nuevos del webhook). `pnpm check` OK.
+- `test:integration`: los 13 de la A5 en verde con el payload oficial (verificación local). Pendiente repetir con Docker en Windows.
