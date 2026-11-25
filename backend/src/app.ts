@@ -13,7 +13,7 @@ import { PrismaNotificationRepo } from './repositories/prisma-notification.repo.
 import { PrismaVideoSessionRepo } from './repositories/prisma-video-session.repo.js';
 import type { VideoSessionRepo } from './repositories/video-session.repo.js';
 import { healthRouter } from './routes/health.js';
-import { incidentsRouter } from './routes/incidents.js';
+import { createIncidentsRouter } from './routes/incidents.js';
 import { createVideoEventsRouter } from './routes/video-events.js';
 import { createVideoTokensRouter } from './routes/video-tokens.js';
 import {
@@ -78,7 +78,7 @@ export function createApp(deps: AppDeps = {}) {
   });
 
   app.use('/api', healthRouter);
-  app.use('/api', incidentsRouter);
+  app.use('/api', createIncidentsRouter({ incidentRepo }));
   app.use(
     '/api',
     createVideoTokensRouter({

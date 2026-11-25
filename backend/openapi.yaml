@@ -31,16 +31,15 @@ paths:
           required: true
           schema:
             type: string
-        # Login simulado del MVP: el backend aún no las exige, pero el
-        # frontend ya las envía y el contrato debe reconocerlas.
+        # Login simulado del MVP (E0-05: obligatorias).
         - name: X-User-Id
           in: header
-          required: false
+          required: true
           schema:
             type: string
         - name: X-User-Role
           in: header
-          required: false
+          required: true
           schema:
             $ref: "#/components/schemas/Role"
       responses:
@@ -50,8 +49,26 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Incident"
+        "401":
+          description: Faltan las cabeceras X-User-Id / X-User-Role o el rol no existe
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: El usuario no participa en la incidencia con ese rol (inquilina, técnica o gestora)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "404":
           description: Incidencia no existe
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Error interno
           content:
             application/json:
               schema:

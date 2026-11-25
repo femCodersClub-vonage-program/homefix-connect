@@ -55,9 +55,9 @@ export interface paths {
         get: {
             parameters: {
                 query?: never;
-                header?: {
-                    "X-User-Id"?: string;
-                    "X-User-Role"?: components["schemas"]["Role"];
+                header: {
+                    "X-User-Id": string;
+                    "X-User-Role": components["schemas"]["Role"];
                 };
                 path: {
                     id: string;
@@ -75,8 +75,35 @@ export interface paths {
                         "application/json": components["schemas"]["Incident"];
                     };
                 };
+                /** @description Faltan las cabeceras X-User-Id / X-User-Role o el rol no existe */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description El usuario no participa en la incidencia con ese rol (inquilina, técnica o gestora) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
                 /** @description Incidencia no existe */
                 404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error interno */
+                500: {
                     headers: {
                         [name: string]: unknown;
                     };
