@@ -14,6 +14,24 @@ jobs:
     name: lint · typecheck · test · build
     runs-on: ubuntu-latest
 
+    # Postgres para los tests de integración (backend/tests/integration).
+    # Mismas credenciales que docker-compose.yml; la BD se llama *_test
+    # porque los tests la vacían (guarda en tests/integration/helpers/test-db-url.ts).
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: homefix
+          POSTGRES_PASSWORD: homefix
+          POSTGRES_DB: homefix_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U homefix -d homefix_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -43,6 +61,11 @@ jobs:
 
       - name: Test
         run: pnpm test
+
+      - name: Integration tests (Postgres)
+        run: pnpm --filter backend test:integration
+        env:
+          TEST_DATABASE_URL: postgresql://homefix:homefix@localhost:5432/homefix_test?schema=public
 
       - name: Build
         run: pnpm build
