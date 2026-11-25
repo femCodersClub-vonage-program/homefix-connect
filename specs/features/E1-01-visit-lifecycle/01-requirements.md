@@ -53,4 +53,9 @@ PR `spec/`: solo `backend/openapi.yaml`, `backend/prisma/schema.prisma` y `front
 
 ## 4. Decisiones de clarificación acordadas
 
-_Pendiente de respuesta._
+Respondidas por Carolina el 25/11 (opciones recomendadas):
+
+- **Q1 = A**: `POST /api/webhooks/video-events` entra en este contrato.
+- **Q2 = B**: el 429 de `/video-tokens` va en la E0-04 y el 401/403 de `GET /incidents/:id` en la E0-05.
+- **Q3 = A**: `notifications` = `{ sent, failed, skipped }` (números).
+- **Q4 = A**: `visit.completedAt` opcional en `Incident`.
