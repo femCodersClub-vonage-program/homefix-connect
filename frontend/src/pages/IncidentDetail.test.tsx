@@ -1,8 +1,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { IncidentDetailData } from '../api/incidents.js';
+import type { IncidentDetailData, IncidentStatus } from '../api/incidents.js';
+import { FINISH_TOAST_MESSAGE } from '../components/FinishToast.js';
 import { makeIncidentFixture } from '../test/fixtures/incident.js';
 import IncidentDetail from './IncidentDetail.js';
 
@@ -22,16 +23,22 @@ vi.mock('../components/VideoCall.js', () => ({
   ),
 }));
 
-function renderPage(incidentId = 'inc_demo') {
+function renderPageWithClient(incidentId = 'inc_demo') {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
 
-  return render(
+  const rendered = render(
     <QueryClientProvider client={queryClient}>
       <IncidentDetail incidentId={incidentId} />
     </QueryClientProvider>,
   );
+
+  return { ...rendered, queryClient };
+}
+
+function renderPage(incidentId = 'inc_demo') {
+  return renderPageWithClient(incidentId);
 }
 
 function mockIncident(data: IncidentDetailData) {
@@ -39,6 +46,25 @@ function mockIncident(data: IncidentDetailData) {
     ok: true,
     status: 200,
     json: async () => data,
+  });
+
+  vi.stubGlobal('fetch', fetchMock);
+  return fetchMock;
+}
+
+function mockIncidentSequence(statuses: IncidentStatus[]) {
+  let call = 0;
+
+  const fetchMock = vi.fn().mockImplementation(() => {
+    const status =
+      statuses[Math.min(call, statuses.length - 1)] ?? 'VISIT_ASSIGNED';
+    call += 1;
+
+    return Promise.resolve({
+      ok: true,
+      status: 200,
+      json: async () => makeIncidentFixture({ status }),
+    });
   });
 
   vi.stubGlobal('fetch', fetchMock);
@@ -96,6 +122,7 @@ function mockApi({
 }
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
@@ -362,5 +389,78 @@ describe('IncidentDetail · entrada a la videollamada', () => {
     await screen.findByTestId('video-call');
     expect(screen.getByRole('radio', { name: /inquilina/i })).toBeDisabled();
     expect(screen.getByRole('radio', { name: /técnica/i })).toBeDisabled();
+  });
+});
+
+describe('IncidentDetail · aviso de fin de visita', () => {
+  it('no muestra el toast si la incidencia ya llega VIDEO_COMPLETED', async () => {
+    mockIncidentSequence(['VIDEO_COMPLETED']);
+    renderPage();
+
+    const button = await screen.findByRole('button', {
+      name: /visita realizada/i,
+    });
+
+    expect(button).toBeDisabled();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
+  it('muestra el toast cuando pasa a VIDEO_COMPLETED y lo oculta a los 5 s', async () => {
+    mockIncidentSequence(['VISIT_ASSIGNED']);
+    const { queryClient } = renderPageWithClient();
+
+    await screen.findByRole('heading', { name: /fuga de agua/i });
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+
+    vi.useFakeTimers();
+    await act(async () => {
+      queryClient.setQueryData(
+        ['incident', 'inc_demo'],
+        makeIncidentFixture({ status: 'VIDEO_COMPLETED' }),
+      );
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    expect(screen.getByRole('status')).toHaveTextContent(FINISH_TOAST_MESSAGE);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
+  it('no duplica el toast con actualizaciones repetidas en VIDEO_COMPLETED', async () => {
+    mockIncidentSequence(['VISIT_ASSIGNED']);
+    const { queryClient } = renderPageWithClient();
+
+    await screen.findByRole('heading', { name: /fuga de agua/i });
+
+    vi.useFakeTimers();
+    await act(async () => {
+      const completed = makeIncidentFixture({ status: 'VIDEO_COMPLETED' });
+      queryClient.setQueryData(['incident', 'inc_demo'], completed);
+      queryClient.setQueryData(['incident', 'inc_demo'], completed);
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    expect(screen.getAllByRole('status')).toHaveLength(1);
+  });
+
+  it('vuelve a consultar la incidencia cada 5 s mientras no esté completada', async () => {
+    const fetchMock = mockIncidentSequence(['VISIT_ASSIGNED', 'VISIT_ASSIGNED']);
+
+    vi.useFakeTimers();
+    renderPage();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });
