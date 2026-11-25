@@ -9,6 +9,7 @@ import type { PostVisitNotifier } from "../services/messaging.service.js";
 
 // A4 · Webhook de Session Monitoring de Vonage Video.
 // Spec: specs/features/A4-video-webhook/02-specification.md
+// Endurecido en E0-02: specs/features/E0-02-session-destroyed/02-specification.md
 
 export type VideoEventsDeps = {
   incidentRepo: IncidentRepo;
@@ -27,6 +28,8 @@ const eventSchema = z.object({
 
 // Q1: solo este evento cierra la visita (~1 min después de que cuelgue la última persona).
 const SESSION_DESTROYED = "sessionDestroyed";
+// E0-02: reason de sessionDestroyed que no cierra nada.
+const SERVER_ROTATION = "serverRotation";
 
 export function createVideoEventsRouter(deps: VideoEventsDeps) {
   const { incidentRepo, videoSessionRepo, postVisitNotifier, getSignatureSecret } =
@@ -54,31 +57,65 @@ export function createVideoEventsRouter(deps: VideoEventsDeps) {
           return;
         }
 
+        // E0-02 · Q1: una rotación de servidor no es el fin de la llamada (la gente
+        // puede reconectar); no se toca nada.
+        if (reason === SERVER_ROTATION) {
+          logger.info({ event, sessionId, reason }, "video event ignored: server rotation");
+          res.status(200).json({ status: "ignored" });
+          return;
+        }
+
         const session = await videoSessionRepo.findByVonageSessionId(sessionId);
+        // E0-02: 200 y no 400, para que Vonage no reintente un evento que nunca
+        // podremos procesar.
         if (!session?.visit) {
-          logger.warn({ event, sessionId }, "video event for unknown session");
-          res.status(400).json({ error: "Unknown session" });
+          logger.warn({ event, sessionId }, "video event ignored: unknown session");
+          res.status(200).json({ status: "ignored" });
+          return;
+        }
+
+        // Idempotencia (E-05): una sesión ya cerrada no hace nada.
+        if (session.status === "ENDED") {
+          logger.info({ event, sessionId }, "video event already processed");
+          res.status(200).json({ status: "already_processed" });
           return;
         }
 
         const incidentId = session.visit.incidentId;
         const incident = await incidentRepo.findById(incidentId);
 
-        // Idempotencia (E-05): un sessionDestroyed repetido no hace nada.
-        if (session.status === "ENDED" || incident?.status === "VIDEO_COMPLETED") {
+        // E0-02: la sesión se cierra SIEMPRE; separado de cerrar la visita.
+        await videoSessionRepo.update(session.id, {
+          status: "ENDED",
+          endedAt: new Date(),
+        });
+
+        // El cierre de la visita + SMS solo procede si la visita seguía abierta:
+        // incidencia VISIT_ASSIGNED, visita CONFIRMED y sesión que llegó a ACTIVE.
+        const visitStillOpen =
+          incident?.status === "VISIT_ASSIGNED" &&
+          session.visit.status === "CONFIRMED" &&
+          session.status === "ACTIVE";
+
+        if (!visitStillOpen) {
+          // Q2: la visita ya estaba cerrada (o nunca empezó): sin SMS.
           logger.info(
-            { event, sessionId, incidentId },
-            "video event already processed",
+            {
+              event,
+              sessionId,
+              incidentId,
+              reason,
+              incidentStatus: incident?.status,
+              visitStatus: session.visit.status,
+              sessionStatus: session.status,
+            },
+            "video session closed; visit already handled",
           );
           res.status(200).json({ status: "already_processed" });
           return;
         }
 
-        // Q4: primero se cierra la visita, después los SMS.
-        await videoSessionRepo.update(session.id, {
-          status: "ENDED",
-          endedAt: new Date(),
-        });
+        // Q4 (A4): primero se cierra la visita, después los SMS.
         await incidentRepo.updateStatus(incidentId, "VIDEO_COMPLETED");
         logger.info({ event, sessionId, incidentId, reason }, "video session ended");
 
