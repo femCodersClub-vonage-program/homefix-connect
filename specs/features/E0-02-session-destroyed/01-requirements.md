@@ -53,4 +53,4 @@
 
 ## 4. Decisiones de clarificación acordadas
 
-_Pendiente de respuesta._
+Respondidas por Carolina el 25/11: **Q1 = A, Q2 = B, Q3 = A** (las propuestas).
