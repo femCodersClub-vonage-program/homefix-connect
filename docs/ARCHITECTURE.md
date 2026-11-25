@@ -264,7 +264,7 @@ sequenceDiagram
 | Riesgo | Impacto | Mitigación |
 |---|---|---|
 | Credenciales o números de Vonage no verificados | Bloquea SMS y vídeo reales | Verificar cuentas en la semana 1 |
-| URL de ngrok cambia | Los webhooks no llegan | Actualizar `WEBHOOK_BASE_URL` y el dashboard de Vonage |
+| URL de ngrok cambia | Los webhooks no llegan | Actualizar la URL en el dashboard de Vonage (callbacks de Video y Messages) |
 | Conflicto en `pnpm-lock.yaml` | Bloquea PRs | Un solo PR tocando dependencias a la vez |
 | El modelo v0 se queda corto | Retrabajo | Refinar en el PR que lo necesite, no antes |
 | Schema y contrato divergen del código | Tests mentirosos | Actualizar `openapi.yaml`/`schema.prisma` en el mismo PR |
