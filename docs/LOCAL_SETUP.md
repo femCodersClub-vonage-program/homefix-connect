@@ -596,3 +596,131 @@ de verdad:
 | `500` y en el log «Credenciales de Vonage Video no configuradas» | Falta `VONAGE_APPLICATION_ID` o `VONAGE_PRIVATE_KEY_PATH` en `.env` | Rellena las dos variables y reinicia `pnpm dev` |
 | `500` y en el log «No se encuentra el private.key… en <ruta>» | El archivo no está donde dice la ruta | Mueve el `private.key` a esa ruta o corrige `VONAGE_PRIVATE_KEY_PATH` |
 | `500` con error de Vonage (401/403) | Application ID y `private.key` no son de la misma aplicación | Pide de nuevo las credenciales a la mentora |
+
+---
+
+## 14. Prueba E2E con Vonage real (I1)
+
+Prueba **manual** del flujo completo: dos pestañas entran a la videollamada, se
+cuelga y, ~1 minuto después, llegan **2 SMS reales** (gestora e inquilina). Se
+hizo así por primera vez el 24/11/2026 (evidencias en
+[`specs/features/I1-e2e/04-validation.md`](../specs/features/I1-e2e/04-validation.md)).
+
+> Nada de lo que se configura aquí se sube a Git: ni el `.env`, ni teléfonos
+> reales, ni la URL de ngrok.
+
+### 14.1 Qué necesitas (una vez)
+
+| Qué | Dónde |
+|---|---|
+| Vídeo funcionando con tu cuenta | §13 (`VONAGE_APPLICATION_ID` + `private.key`) |
+| ngrok **3.30 o superior** con cuenta gratuita | `winget install ngrok.ngrok` → `ngrok update` → `ngrok config add-authtoken <tu token>` (el token está en dashboard.ngrok.com → *Your Authtoken*) |
+| Un remitente para los SMS | Con cuenta de prueba de Vonage no se pueden comprar números: vale un nombre, p. ej. `HomeFix` |
+| Móviles de destino verificados | Cuenta de prueba: solo se envía a *Test numbers* (panel de Vonage → *Numbers* → *test numbers*) |
+
+Comprueba la versión de ngrok: con la que instala `winget` (3.3.1) falla con
+`ERR_NGROK_121` («agent version too old»). `ngrok update` lo arregla.
+
+### 14.2 Arrancar
+
+Necesitas **dos terminales abiertas todo el rato**:
+
+```bash
+# Terminal 1
+pnpm db:up
+pnpm dev
+```
+
+```bash
+# Terminal 2
+ngrok http 3000
+```
+
+Copia la URL de la línea `Forwarding` (`https://xxxx.ngrok-free.dev`) y
+comprueba que llega a tu backend abriendo `https://xxxx.ngrok-free.dev/api/health`
+(debe responder `{"status":"ok"}`). Solo hace falta **un** túnel, al backend:
+las pestañas usan `http://localhost:5173` y Vite reenvía `/api`.
+
+> Si cierras ngrok, la URL cambia y hay que volver a ponerla en Vonage (14.3).
+
+### 14.3 Configurar el callback en Vonage
+
+En el panel de Vonage → *Applications* → tu aplicación → *Edit* → **Video**:
+
+1. **Session monitoring callback URL**:
+   `https://xxxx.ngrok-free.dev/api/webhooks/video-events`
+2. Activa **Signature secret** justo debajo. Vonage genera uno.
+3. *Save changes*.
+
+El secreto de Video se configura **aquí, en la aplicación**, no en *API Settings*.
+
+En el `.env` de la raíz:
+
+```bash
+VONAGE_SIGNATURE_SECRET=<el signature secret de la aplicación>
+VONAGE_MESSAGES_FROM=HomeFix
+```
+
+Reinicia `pnpm dev` (`Ctrl + C` y otra vez `pnpm dev`).
+
+### 14.4 Poner teléfonos reales (solo en tu BD local)
+
+El seed trae números falsos (`+3460000000X`). En una tercera terminal:
+
+```bash
+pnpm db:studio
+```
+
+En `http://localhost:5555` → **User**: cambia `phone` de `usr_manager_demo` y
+`usr_tenant_demo` por tus números de test (formato `+34…`) y pulsa
+*Save 2 changes*. Pueden ser el mismo número: te llegarán los dos SMS.
+
+Comprueba en **Incident** que `inc_demo` está en `VISIT_ASSIGNED`.
+
+### 14.5 Hacer la prueba
+
+1. Abre **dos pestañas** en `http://localhost:5173/?incidentId=inc_demo`.
+2. Pestaña 1: rol **Inquilina** → *Entrar a la videollamada* (acepta cámara y
+   micrófono).
+3. Pestaña 2: rol **Técnica** → *Entrar a la videollamada*.
+4. Las dos ponen «Conectado» y ven su vídeo y el de la otra.
+5. **Cuelga cerrando las dos pestañas** (no hay botón de colgar).
+6. **Espera 1 minuto**: Vonage manda `sessionDestroyed` 60 s después de que se
+   vaya la última persona.
+
+### 14.6 Qué comprobar
+
+| Dónde | Qué debes ver |
+|---|---|
+| Consola de ngrok `http://127.0.0.1:4040` | Varios `POST /api/webhooks/video-events` → `200 {"status":"ignored"}` y uno con `"event": "sessionDestroyed"` → `200 {"status":"processed"}` |
+| Prisma Studio → **VideoSession** | `status = ENDED` y `endedAt` relleno |
+| Prisma Studio → **Incident** | `status = VIDEO_COMPLETED` |
+| Prisma Studio → **Notification** | 2 filas `post_visit` en `QUEUED` con `providerMessageId` y `error` vacío |
+| Tu móvil | 2 SMS «Visita realizada para la incidencia «Fuga de agua en el baño»…». Llegan desde un número genérico, no desde «HomeFix»: Vonage cambia el remitente. Con cuenta de prueba llevan «[FREE SMS DEMO, TEST MESSAGE]» |
+
+Opcional: en la consola de ngrok, *Replay* sobre el `sessionDestroyed` debe
+responder `{"status":"already_processed"}` y no enviar más SMS.
+
+### 14.7 Repetir la prueba
+
+Tras una prueba la incidencia queda en `VIDEO_COMPLETED` y entrar a la llamada
+devuelve `409`. Para empezar de cero:
+
+```bash
+pnpm db:reset
+```
+
+y vuelve a poner los teléfonos (14.4). ngrok y la configuración de Vonage no se
+tocan mientras no cierres ngrok.
+
+### 14.8 Errores comunes
+
+| Síntoma | Causa | Solución |
+|---|---|---|
+| `ERR_NGROK_4018` | ngrok sin cuenta | `ngrok config add-authtoken <token>` |
+| `ERR_NGROK_121` | ngrok demasiado antiguo | `ngrok update` |
+| No llega ningún callback | URL mal puesta en Vonage o ngrok reiniciado | Revisa la URL de 14.3 y la consola de ngrok |
+| Callback → `500` «Webhook signature secret not configured» | `VONAGE_SIGNATURE_SECRET` vacío | Copia el secreto de 14.3 y reinicia `pnpm dev` |
+| Callback → `401` | El secreto del `.env` no es el de la aplicación | Vuelve a copiarlo de *Edit → Video* |
+| `Notification` en `FAILED` | Remitente vacío o no aceptado, sin saldo, o número no verificado en cuenta de prueba (error 29 «Non White-listed Destination») | Mira `error` en la `Notification` y revisa 14.1 |
+| `409` al entrar a la llamada | La incidencia ya está en `VIDEO_COMPLETED` | `pnpm db:reset` (14.7) |
