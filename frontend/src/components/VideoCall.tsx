@@ -26,7 +26,7 @@ export function VideoCall({
 }: VideoCallProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const remoteContainerRef = useRef<HTMLDivElement>(null);
-  const { status, remoteConnected } = useVideoCall({
+  const { status, remoteConnected, hangup } = useVideoCall({
     applicationId,
     sessionId,
     token,
@@ -44,6 +44,14 @@ export function VideoCall({
       >
         {statusLabels[status]}
       </p>
+      <button
+        type="button"
+        className="video-call__hangup"
+        disabled={status !== 'connected'}
+        onClick={hangup}
+      >
+        Colgar
+      </button>
       <div className="video-call__stage">
         <div className="video-call__remote-wrap">
           <div
