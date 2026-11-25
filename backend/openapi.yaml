@@ -107,6 +107,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "429":
+          description: >
+            Demasiadas peticiones del mismo usuario (X-User-Id) en la ventana
+            (por defecto 10 por minuto). Se reintenta pasados `Retry-After` segundos.
+          headers:
+            Retry-After:
+              description: Segundos que faltan para que se reinicie la ventana
+              schema:
+                type: integer
+                minimum: 1
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Falta configuración del servidor (VONAGE_APPLICATION_ID)
           content:
