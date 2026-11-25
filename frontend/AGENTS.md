@@ -23,8 +23,8 @@ frontend/
     ├── api/generated/       # tipos generados desde openapi.yaml (C1)
     ├── api/incidents.ts     # tipos generados + getIncident (C1/C2)
     ├── api/video.ts         # requestVideoToken (C3)
-    ├── components/          # JoinButton (C2), VideoCall (C3)
-    ├── hooks/               # useIncident (C2), useVideoToken/useVideoCall (C3)
+    ├── components/          # JoinButton (C2), VideoCall (C3/C4/C8)
+    ├── hooks/               # useIncident (C2), useVideoToken/useVideoCall (C3/C4/C8)
     ├── pages/               # IncidentDetail (C2/C3)
     ├── index.css            # estilos base y stage de vídeo
     └── test/
@@ -79,6 +79,8 @@ hook.
   "Esperando a la otra persona…" mientras no llega ese stream.
 - Maneja `sessionDisconnected` / `connectionDestroyed` / `streamDestroyed` sin
   dejar la UI colgada. No hay reconexión automática ni timeout en el MVP.
+- C8 expone `hangup()` en `useVideoCall` y un botón "Colgar" en `VideoCall`. La
+  desconexión es local; el cierre global sigue por webhook de Vonage.
 - Los tests **no** abren cámara ni red: se mockea el SDK.
 
 ## 6. Estilos

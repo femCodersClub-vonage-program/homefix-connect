@@ -1,5 +1,5 @@
-import { act, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { VideoCall } from './VideoCall.js';
 
@@ -356,4 +356,100 @@ describe('VideoCall', () => {
     ).toBeInTheDocument();
     expect(session.disconnect).toHaveBeenCalled();
   });
+
+  it('muestra el botón "Colgar" habilitado cuando está conectada', async () => {
+    renderCall();
+
+    await screen.findByText('Conectada');
+
+    expect(screen.getByRole('button', { name: 'Colgar' })).toBeEnabled();
+  });
+
+  it('deshabilita "Colgar" mientras conecta y cuando termina', async () => {
+    let connectCallback: Callback | undefined;
+    session.connect.mockImplementation((_token: string, callback: Callback) => {
+      connectCallback = callback;
+      return session;
+    });
+
+    renderCall();
+
+    expect(screen.getByRole('button', { name: 'Colgar' })).toBeDisabled();
+
+    act(() => {
+      connectCallback?.();
+    });
+
+    await screen.findByText('Conectada');
+    expect(screen.getByRole('button', { name: 'Colgar' })).toBeEnabled();
+
+    emit('sessionDisconnected');
+    expect(screen.getByRole('button', { name: 'Colgar' })).toBeDisabled();
+  });
+
+  it('al pulsar "Colgar" limpia la sesión y muestra "Desconectada"', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderCall();
+    await screen.findByText('Conectada');
+    emit('streamCreated', { stream: remoteStream() });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Colgar' }));
+
+    expect(screen.getByText('Desconectada')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Colgar' })).toBeDisabled();
+    expect(session.off).toHaveBeenCalledWith(
+      'sessionDisconnected',
+      expect.any(Function),
+    );
+    expect(session.off).toHaveBeenCalledWith(
+      'connectionDestroyed',
+      expect.any(Function),
+    );
+    expect(session.off).toHaveBeenCalledWith(
+      'streamCreated',
+      expect.any(Function),
+    );
+    expect(session.off).toHaveBeenCalledWith(
+      'streamDestroyed',
+      expect.any(Function),
+    );
+    expect(session.unsubscribe).toHaveBeenCalledWith(subscriber);
+    expect(session.unpublish).toHaveBeenCalledWith(publisher);
+    expect(publisher.destroy).toHaveBeenCalled();
+    expect(session.disconnect).toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('no repite la limpieza si se pulsa dos veces o llega un evento tardío', async () => {
+    renderCall();
+    await screen.findByText('Conectada');
+
+    const button = screen.getByRole('button', { name: 'Colgar' });
+    fireEvent.click(button);
+    fireEvent.click(button);
+    emit('sessionDisconnected');
+
+    expect(session.disconnect).toHaveBeenCalledTimes(1);
+    expect(session.unpublish).toHaveBeenCalledTimes(1);
+  });
+
+  it('mantiene "Desconectada" si disconnect falla', async () => {
+    session.disconnect.mockRejectedValueOnce(new Error('offline'));
+
+    renderCall();
+    await screen.findByText('Conectada');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Colgar' }));
+
+    expect(screen.getByText('Desconectada')).toBeInTheDocument();
+    expect(
+      screen.queryByText('No se pudo iniciar la videollamada'),
+    ).not.toBeInTheDocument();
+  });
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
 });

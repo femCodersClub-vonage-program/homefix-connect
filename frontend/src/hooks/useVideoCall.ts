@@ -1,4 +1,4 @@
-import { useEffect, useState, type RefObject } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import OT from '@vonage/client-sdk-video';
 
 export type VideoCallStatus =
@@ -11,6 +11,10 @@ export type VideoCallStatus =
 export type VideoCallState = {
   status: VideoCallStatus;
   remoteConnected: boolean;
+};
+
+export type VideoCallResult = VideoCallState & {
+  hangup: () => void;
 };
 
 type UseVideoCallParams = {
@@ -45,9 +49,10 @@ export function useVideoCall({
   token,
   containerRef,
   remoteContainerRef,
-}: UseVideoCallParams): VideoCallState {
+}: UseVideoCallParams): VideoCallResult {
   const [status, setStatus] = useState<VideoCallStatus>('idle');
   const [remoteConnected, setRemoteConnected] = useState(false);
+  const hangupRef = useRef<() => void>(() => undefined);
 
   useEffect(() => {
     const target = containerRef.current;
@@ -126,6 +131,13 @@ export function useVideoCall({
         }
       }
     }
+
+    hangupRef.current = () => {
+      if (disposed || cleaned) return;
+      setStatus('ended');
+      setRemoteConnected(false);
+      cleanup();
+    };
 
     function fail() {
       if (disposed || cleaned) return;
@@ -308,8 +320,13 @@ export function useVideoCall({
     return () => {
       disposed = true;
       cleanup();
+      hangupRef.current = () => undefined;
     };
   }, [applicationId, sessionId, token, containerRef, remoteContainerRef]);
 
-  return { status, remoteConnected };
+  return {
+    status,
+    remoteConnected,
+    hangup: () => hangupRef.current(),
+  };
 }
