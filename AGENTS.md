@@ -283,12 +283,16 @@ El repositorio cuenta con skills instaladas localmente para asistir el desarroll
 
 ## 10. Testing
 
-| Tipo | Herramienta | Dónde | Cuándo |
+| Tipo | Herramienta | Dónde | Cómo se ejecuta |
 |---|---|---|---|
-| Unitario | Vitest | `src/**/*.test.ts(x)` | Siempre |
-| Contrato | Pact | `backend/tests/contract/` | Endpoints de la API |
-| Integración | Supertest | `backend/tests/integration/` | Rutas + BD/webhooks |
+| Unitario | Vitest | `backend/src/__tests__/`, `backend/tests/unit/` y `frontend/src/**/*.test.ts(x)` | `pnpm test` |
+| Contrato | Vitest + Supertest | `backend/tests/contract/` | `pnpm test` |
+| Integración | Vitest + Supertest + Postgres real | `backend/tests/integration/` | `pnpm --filter backend test:integration` (en local necesita `pnpm db:up`) |
 | E2E | Playwright | `frontend/tests/e2e/` | Flujo completo (I1) |
+
+**En la CI** (`.github/workflows/ci.yml`) corren unitarios, contrato e integración: `pnpm test`
+y, aparte, `test:integration` contra un servicio Postgres (`homefix_test`).
+`pnpm test` en local **no** necesita Docker; la integración se lanza a mano.
 
 Reglas:
 
@@ -298,8 +302,9 @@ Reglas:
   `it('devuelve 404 cuando la incidencia no existe')`.
 - Un bug arreglado = un test que lo reproduce.
 
-> Las carpetas `tests/contract`, `tests/integration` y `tests/e2e` se crean con
-> las tareas A5, B5, C6 e I1. No las crees vacías "por si acaso".
+> `backend/tests/unit`, `tests/contract` y `tests/integration` ya existen (A5 y B5).
+> `frontend/tests/e2e` se crea solo si el equipo decide automatizar el E2E.
+> No crees carpetas vacías "por si acaso".
 
 ---
 
