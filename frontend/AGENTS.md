@@ -23,8 +23,8 @@ frontend/
     ├── api/generated/       # tipos generados desde openapi.yaml (C1)
     ├── api/incidents.ts     # tipos generados + getIncident (C1/C2)
     ├── api/video.ts         # requestVideoToken (C3)
-    ├── components/          # JoinButton (C2), VideoCall (C3/C4/C8)
-    ├── hooks/               # useIncident (C2), useVideoToken/useVideoCall (C3/C4/C8)
+    ├── components/          # JoinButton (C2), VideoCall (C3/C4/C8), FinishToast (C5)
+    ├── hooks/               # useIncident (C2/C5), useVideoToken/useVideoCall (C3/C4/C8), useFinishToast (C5)
     ├── pages/               # IncidentDetail (C2/C3)
     ├── index.css            # estilos base y stage de vídeo
     └── test/
@@ -33,7 +33,7 @@ frontend/
 ```
 
 `components/`, `pages/`, `hooks/` y `test/fixtures/` se crearon en C2. C3 añade
-`VideoCall` y sus hooks; C4-C5 añaden las suyas.
+`VideoCall` y sus hooks; C4, C5 y C8 añaden las suyas.
 
 ## 3. Componentes vs hooks
 
@@ -81,6 +81,9 @@ hook.
   dejar la UI colgada. No hay reconexión automática ni timeout en el MVP.
 - C8 expone `hangup()` en `useVideoCall` y un botón "Colgar" en `VideoCall`. La
   desconexión es local; el cierre global sigue por webhook de Vonage.
+- C5 detecta la transición a `VIDEO_COMPLETED` con `useFinishToast` y muestra
+  `FinishToast` durante 5 s. `useIncident` consulta cada 5 s hasta que la
+  incidencia se completa. Sin librería de toast.
 - Los tests **no** abren cámara ni red: se mockea el SDK.
 
 ## 6. Estilos
