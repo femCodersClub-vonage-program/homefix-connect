@@ -1,6 +1,10 @@
 import type { Notification, PrismaClient } from '@prisma/client';
 
-import type { NotificationCreate, NotificationRepo } from './notification.repo.js';
+import type {
+  NotificationCreate,
+  NotificationRepo,
+  NotificationStatusUpdate,
+} from './notification.repo.js';
 
 export class PrismaNotificationRepo implements NotificationRepo {
   private readonly prisma: PrismaClient;
@@ -18,5 +22,13 @@ export class PrismaNotificationRepo implements NotificationRepo {
 
   create(data: NotificationCreate): Promise<Notification> {
     return this.prisma.notification.create({ data });
+  }
+
+  findByProviderMessageId(providerMessageId: string): Promise<Notification | null> {
+    return this.prisma.notification.findUnique({ where: { providerMessageId } });
+  }
+
+  updateStatus(id: string, data: NotificationStatusUpdate): Promise<Notification> {
+    return this.prisma.notification.update({ where: { id }, data });
   }
 }
