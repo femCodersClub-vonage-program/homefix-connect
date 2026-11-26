@@ -39,6 +39,10 @@ const envSchema = z.object({
   VONAGE_PRIVATE_KEY_PATH: z.string().optional(),
   VONAGE_MESSAGES_FROM: z.string().optional(),
   VONAGE_SIGNATURE_SECRET: z.string().optional(),
+
+  // E0-04: rate limit de POST /api/video-tokens por usuario (X-User-Id).
+  VIDEO_TOKENS_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
+  VIDEO_TOKENS_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
 });
 
 const parsed = envSchema.safeParse(process.env);

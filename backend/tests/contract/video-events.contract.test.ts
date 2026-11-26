@@ -80,6 +80,7 @@ function makeIncident(options: FixtureOptions = {}): IncidentWithRelations {
     incidentId: "inc_demo",
     scheduledAt: now,
     status: "CONFIRMED",
+    completedAt: null,
     createdAt: now,
     updatedAt: now,
     videoSession,
