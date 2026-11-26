@@ -11,7 +11,11 @@ import {
   VonageValidationError,
 } from '../lib/vonage-errors.js';
 import type { IncidentRepo } from '../repositories/incident.repo.js';
-import type { NotificationRepo } from '../repositories/notification.repo.js';
+import {
+  type NotificationCreate,
+  NotificationAlreadyExistsError,
+  type NotificationRepo,
+} from '../repositories/notification.repo.js';
 
 export interface MessagingService {
   sendSms(to: string, body: string): Promise<{ providerMessageId: string }>;
@@ -91,15 +95,32 @@ export class MessagingPostVisitNotifier implements PostVisitNotifier {
       throw new Error(`Incident ${incidentId} not found`);
     }
 
-    // B3 · Q3/Q4/Q5: si ya hay alguna Notification post_visit (en cualquier estado), no se envía nada.
-    if (await this.notificationRepo.existsForIncident(incidentId, POST_VISIT_TEMPLATE_ID)) {
-      const roles: PostVisitRole[] = incident.manager ? ['MANAGER', 'TENANT'] : ['TENANT'];
-      logger.info({ incidentId }, 'post-visit sms skipped: already sent');
-      return {
-        sent: [],
-        failed: [],
-        skipped: roles.map((role) => ({ role, reason: 'ALREADY_SENT' as const })),
-      };
+    // Q5: gestora → inquilina. La gestora es opcional en el modelo.
+    const recipients: { role: PostVisitRole; user: { id: string; phone: string } }[] = [];
+    const result: PostVisitResult = { sent: [], failed: [], skipped: [] };
+    if (incident.manager) {
+      recipients.push({ role: 'MANAGER', user: incident.manager });
+    } else {
+      result.skipped.push({ role: 'MANAGER', reason: 'NO_MANAGER' });
+      logger.warn({ incidentId }, 'post-visit sms skipped: incident has no manager');
+    }
+    recipients.push({ role: 'TENANT', user: incident.tenant });
+
+    // E4-02: idempotencia por destinataria (antes, B3, por incidencia). Una destinataria
+    // con registro (en cualquier estado, también FAILED: sin reintentos) no recibe otro SMS;
+    // las demás sí.
+    const alreadyRegistered = new Set(
+      await this.notificationRepo.findRecipientIds(incidentId, POST_VISIT_TEMPLATE_ID),
+    );
+    const pending = recipients.filter(({ role, user }) => {
+      if (!alreadyRegistered.has(user.id)) return true;
+      result.skipped.push({ role, reason: 'ALREADY_SENT' });
+      logger.info({ incidentId, recipientId: user.id, role }, 'post-visit sms skipped: already sent');
+      return false;
+    });
+
+    if (pending.length === 0) {
+      return result;
     }
 
     // Q2: el parámetro manda; si llega vacío, el nombre de la técnica de la incidencia.
@@ -109,27 +130,16 @@ export class MessagingPostVisitNotifier implements PostVisitNotifier {
     }
 
     const body = buildPostVisitBody(incident.title, tecnica);
-    const result: PostVisitResult = { sent: [], failed: [], skipped: [] };
-
-    // Q5: gestora → inquilina. La gestora es opcional en el modelo.
-    const recipients: { role: PostVisitRole; user: { id: string; phone: string } }[] = [];
-    if (incident.manager) {
-      recipients.push({ role: 'MANAGER', user: incident.manager });
-    } else {
-      result.skipped.push({ role: 'MANAGER', reason: 'NO_MANAGER' });
-      logger.warn({ incidentId }, 'post-visit sms skipped: incident has no manager');
-    }
-    recipients.push({ role: 'TENANT', user: incident.tenant });
 
     // Q4: si falla una, se sigue con la otra. Sin reintentos (ADR-012): el fallo queda en FAILED.
     // B3: tras cada SMS se guarda su Notification antes de pasar a la siguiente.
-    for (const { role, user } of recipients) {
+    for (const { role, user } of pending) {
       let providerMessageId: string;
       try {
         ({ providerMessageId } = await this.messaging.sendSms(user.phone, body));
       } catch (error) {
         const errorName = error instanceof Error ? error.name : 'UnknownError';
-        await this.notificationRepo.create({
+        const saved = await this.saveOrSkip(result, role, {
           incidentId,
           recipientId: user.id,
           template: POST_VISIT_TEMPLATE_ID,
@@ -137,6 +147,7 @@ export class MessagingPostVisitNotifier implements PostVisitNotifier {
           error: errorName,
           sentAt: null,
         });
+        if (!saved) continue;
         result.failed.push({ recipientId: user.id, role, error: errorName });
         logger.error(
           { incidentId, recipientId: user.id, role, error: errorName },
@@ -145,7 +156,7 @@ export class MessagingPostVisitNotifier implements PostVisitNotifier {
         continue;
       }
 
-      await this.notificationRepo.create({
+      const saved = await this.saveOrSkip(result, role, {
         incidentId,
         recipientId: user.id,
         template: POST_VISIT_TEMPLATE_ID,
@@ -153,6 +164,7 @@ export class MessagingPostVisitNotifier implements PostVisitNotifier {
         providerMessageId,
         sentAt: new Date(),
       });
+      if (!saved) continue;
       result.sent.push({ recipientId: user.id, role, providerMessageId });
       logger.info(
         { incidentId, recipientId: user.id, role, providerMessageId },
@@ -161,6 +173,30 @@ export class MessagingPostVisitNotifier implements PostVisitNotifier {
     }
 
     return result;
+  }
+
+  /**
+   * E4-02: guarda la Notification. Si otra llamada concurrente ya la creó
+   * (P2002 en la unique por destinataria), la cuenta como `ALREADY_SENT`.
+   * En esa carrera el SMS ya ha salido: queda un warn para poder verlo.
+   */
+  private async saveOrSkip(
+    result: PostVisitResult,
+    role: PostVisitRole,
+    data: NotificationCreate,
+  ): Promise<boolean> {
+    try {
+      await this.notificationRepo.create(data);
+      return true;
+    } catch (error) {
+      if (!(error instanceof NotificationAlreadyExistsError)) throw error;
+      result.skipped.push({ role, reason: 'ALREADY_SENT' });
+      logger.warn(
+        { incidentId: data.incidentId, recipientId: data.recipientId, role },
+        'post-visit notification already exists (concurrent call): counted as ALREADY_SENT',
+      );
+      return false;
+    }
   }
 }
 

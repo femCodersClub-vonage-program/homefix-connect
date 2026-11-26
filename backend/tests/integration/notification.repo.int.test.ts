@@ -1,10 +1,12 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { prisma } from '../../src/db/client.js';
+import { NotificationAlreadyExistsError } from '../../src/repositories/notification.repo.js';
 import { PrismaNotificationRepo } from '../../src/repositories/prisma-notification.repo.js';
 import { IDS, resetDatabase, seedPostVisitData } from './helpers/db.js';
 
 // B5 · PrismaNotificationRepo contra Postgres real (INT-1 a INT-3).
+// E4-02 · unique por destinataria (INT-3 reescrito, INT-E4-1 e INT-E4-2).
 // Spec: specs/features/B5-messaging-tests/02-specification.md
 
 const repo = new PrismaNotificationRepo(prisma);
@@ -72,8 +74,8 @@ describe('PrismaNotificationRepo (integración)', () => {
     });
   });
 
-  it('INT-3 · existsForIncident: solo true con misma incidencia y misma plantilla', async () => {
-    expect(await repo.existsForIncident(IDS.incident, 'post_visit')).toBe(false);
+  it('INT-3 · findRecipientIds: solo las destinatarias de esa incidencia y plantilla (E4-02)', async () => {
+    expect(await repo.findRecipientIds(IDS.incident, 'post_visit')).toEqual([]);
 
     await repo.create({
       incidentId: IDS.incident,
@@ -81,15 +83,59 @@ describe('PrismaNotificationRepo (integración)', () => {
       template: 'otra_plantilla',
       status: 'QUEUED',
     });
-    expect(await repo.existsForIncident(IDS.incident, 'post_visit')).toBe(false);
-    expect(await repo.existsForIncident('inc_otra', 'otra_plantilla')).toBe(false);
+    expect(await repo.findRecipientIds(IDS.incident, 'post_visit')).toEqual([]);
 
     await repo.create({
       incidentId: IDS.incident,
       recipientId: IDS.tenant,
       template: 'post_visit',
-      status: 'QUEUED',
+      status: 'FAILED',
+      error: 'VonageNetworkError',
     });
-    expect(await repo.existsForIncident(IDS.incident, 'post_visit')).toBe(true);
+    expect(await repo.findRecipientIds(IDS.incident, 'post_visit')).toEqual([IDS.tenant]);
+  });
+
+  it('INT-E4-1 · la unique por destinataria: el segundo create lanza NotificationAlreadyExistsError', async () => {
+    await repo.create({
+      incidentId: IDS.incident,
+      recipientId: IDS.tenant,
+      template: 'post_visit',
+      status: 'QUEUED',
+      providerMessageId: 'msg-1',
+    });
+
+    await expect(
+      repo.create({
+        incidentId: IDS.incident,
+        recipientId: IDS.tenant,
+        template: 'post_visit',
+        status: 'QUEUED',
+        providerMessageId: 'msg-2',
+      }),
+    ).rejects.toBeInstanceOf(NotificationAlreadyExistsError);
+    expect(await prisma.notification.count()).toBe(1);
+  });
+
+  it('INT-E4-2 · un providerMessageId repetido no se confunde con la unique por destinataria', async () => {
+    await repo.create({
+      incidentId: IDS.incident,
+      recipientId: IDS.tenant,
+      template: 'post_visit',
+      status: 'QUEUED',
+      providerMessageId: 'msg-repetido',
+    });
+
+    const error = await repo
+      .create({
+        incidentId: IDS.incident,
+        recipientId: IDS.manager,
+        template: 'post_visit',
+        status: 'QUEUED',
+        providerMessageId: 'msg-repetido',
+      })
+      .catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(Error);
+    expect(error).not.toBeInstanceOf(NotificationAlreadyExistsError);
   });
 });
