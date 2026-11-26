@@ -4,6 +4,7 @@ import type {
   NotificationCreate,
   NotificationRepo,
   NotificationStatusUpdate,
+  NotificationWithRecipient,
 } from './notification.repo.js';
 
 export class PrismaNotificationRepo implements NotificationRepo {
@@ -30,5 +31,13 @@ export class PrismaNotificationRepo implements NotificationRepo {
 
   updateStatus(id: string, data: NotificationStatusUpdate): Promise<Notification> {
     return this.prisma.notification.update({ where: { id }, data });
+  }
+
+  findByIncidentId(incidentId: string): Promise<NotificationWithRecipient[]> {
+    return this.prisma.notification.findMany({
+      where: { incidentId },
+      include: { recipient: { select: { id: true, name: true, role: true } } },
+      orderBy: { createdAt: 'asc' },
+    });
   }
 }
