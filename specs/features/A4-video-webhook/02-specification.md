@@ -2,6 +2,8 @@
 
 > Issue: #10 · Rama: `feat/A4-video-webhook` · Requisitos: `01-requirements.md` · Estado: borrador (Q1–Q9 acordadas, 23/11)
 
+> ⚠️ **E0-02 (#61)** cambia RF-5 (sesión desconocida → 200 `ignored`) y RF-6 (la sesión se cierra aunque la visita ya esté completada; `serverRotation` se ignora). Ver `specs/features/E0-02-session-destroyed/02-specification.md`.
+
 ## 1. Resumen y contexto
 
 Vonage Video avisa al backend de lo que pasa en cada sesión (*Session Monitoring*). Cuando llega **`sessionDestroyed`** (~1 min después de que cuelgue la última persona), la A4 cierra la visita:
