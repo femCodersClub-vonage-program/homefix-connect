@@ -43,6 +43,10 @@ const envSchema = z.object({
   VONAGE_SIGNATURE_SECRET: z.string().optional(),
 
   WEBHOOK_BASE_URL: z.string().url().default('http://localhost:3000'),
+
+  // E0-04: rate limit de POST /api/video-tokens por usuario (X-User-Id).
+  VIDEO_TOKENS_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
+  VIDEO_TOKENS_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
 });
 
 const parsed = envSchema.safeParse(process.env);

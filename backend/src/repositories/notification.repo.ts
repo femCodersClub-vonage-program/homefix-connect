@@ -52,6 +52,7 @@ export class InMemoryNotificationRepo implements NotificationRepo {
       providerMessageId: data.providerMessageId ?? null,
       error: data.error ?? null,
       sentAt: data.sentAt ?? null,
+      deliveredAt: null,
       createdAt: now,
       updatedAt: now,
     };
