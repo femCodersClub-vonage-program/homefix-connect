@@ -380,4 +380,22 @@ describe("POST /api/webhooks/video-events", () => {
     expect((await incidentRepo.findById("inc_demo"))?.status).toBe("VISIT_ASSIGNED");
     expect(postVisitNotifier.sendPostVisit).not.toHaveBeenCalled();
   });
+
+  it("E0-02 · si falla cerrar la visita → 500, sin SMS y la sesión sigue ACTIVE; el reintento la cierra", async () => {
+    const { app, incidentRepo, videoSessionRepo, postVisitNotifier } = setup();
+    vi.spyOn(incidentRepo, "updateStatus").mockRejectedValueOnce(new Error("BD caída"));
+
+    const res = await post(app, SESSION_DESTROYED);
+
+    expect(res.status).toBe(500);
+    expect(postVisitNotifier.sendPostVisit).not.toHaveBeenCalled();
+    expect((await videoSessionRepo.findByVonageSessionId(VONAGE_SESSION_ID))?.status).toBe("ACTIVE");
+
+    // Reintento de Vonage: ahora sí cierra la visita, avisa y cierra la sesión.
+    const retry = await post(app, SESSION_DESTROYED);
+    expect(retry.body).toEqual({ status: "processed" });
+    expect((await incidentRepo.findById("inc_demo"))?.status).toBe("VIDEO_COMPLETED");
+    expect(postVisitNotifier.sendPostVisit).toHaveBeenCalledOnce();
+    expect((await videoSessionRepo.findByVonageSessionId(VONAGE_SESSION_ID))?.status).toBe("ENDED");
+  });
 });

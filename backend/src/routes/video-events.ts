@@ -84,18 +84,49 @@ export function createVideoEventsRouter(deps: VideoEventsDeps) {
         const incidentId = session.visit.incidentId;
         const incident = await incidentRepo.findById(incidentId);
 
-        // E0-02: la sesión se cierra SIEMPRE; separado de cerrar la visita.
-        await videoSessionRepo.update(session.id, {
-          status: "ENDED",
-          endedAt: new Date(),
-        });
-
         // El cierre de la visita + SMS solo procede si la visita seguía abierta:
         // incidencia VISIT_ASSIGNED, visita CONFIRMED y sesión que llegó a ACTIVE.
         const visitStillOpen =
           incident?.status === "VISIT_ASSIGNED" &&
           session.visit.status === "CONFIRMED" &&
           session.status === "ACTIVE";
+
+        if (visitStillOpen) {
+          // Q4 (A4): primero se cierra la visita, después los SMS.
+          await incidentRepo.updateStatus(incidentId, "VIDEO_COMPLETED");
+          logger.info({ event, sessionId, incidentId, reason }, "visit completed by webhook");
+
+          // Q3: si falla, la visita ya está cerrada; se registra y se responde 200.
+          try {
+            // Q5: '' → sendPostVisit usa el nombre de la técnica de la incidencia.
+            const result = await postVisitNotifier.sendPostVisit(incidentId, "");
+            logger.info(
+              {
+                incidentId,
+                sent: result.sent.length,
+                failed: result.failed.length,
+                skipped: result.skipped.length,
+              },
+              "post-visit notification done",
+            );
+          } catch (error) {
+            logger.error(
+              {
+                incidentId,
+                error: error instanceof Error ? error.name : "UnknownError",
+              },
+              "post-visit notification failed",
+            );
+          }
+        }
+
+        // E0-02: la sesión se cierra SIEMPRE, pero al final: si cerrar la visita
+        // falla (500), el reintento de Vonage la encuentra aún ACTIVE y lo repite.
+        // Cerrándola antes, el reintento veía ENDED y la visita no se cerraba nunca.
+        await videoSessionRepo.update(session.id, {
+          status: "ENDED",
+          endedAt: new Date(),
+        });
 
         if (!visitStillOpen) {
           // Q2: la visita ya estaba cerrada (o nunca empezó): sin SMS.
@@ -115,33 +146,7 @@ export function createVideoEventsRouter(deps: VideoEventsDeps) {
           return;
         }
 
-        // Q4 (A4): primero se cierra la visita, después los SMS.
-        await incidentRepo.updateStatus(incidentId, "VIDEO_COMPLETED");
         logger.info({ event, sessionId, incidentId, reason }, "video session ended");
-
-        // Q3: si falla, la visita ya está cerrada; se registra y se responde 200.
-        try {
-          // Q5: '' → sendPostVisit usa el nombre de la técnica de la incidencia.
-          const result = await postVisitNotifier.sendPostVisit(incidentId, "");
-          logger.info(
-            {
-              incidentId,
-              sent: result.sent.length,
-              failed: result.failed.length,
-              skipped: result.skipped.length,
-            },
-            "post-visit notification done",
-          );
-        } catch (error) {
-          logger.error(
-            {
-              incidentId,
-              error: error instanceof Error ? error.name : "UnknownError",
-            },
-            "post-visit notification failed",
-          );
-        }
-
         res.status(200).json({ status: "processed" });
       } catch (error) {
         next(error);

@@ -18,3 +18,8 @@ $ pnpm build   → OK
 - [x] Sesión desconocida → 200 `ignored`
 - [x] No duplica SMS
 - [x] Tests de contrato + integración (integración pendiente de ejecutar)
+
+## 26/11 · Orden del cierre
+
+- La `VideoSession` pasa a `ENDED` al final (antes, al principio). Nuevo test unitario: fallo al guardar la incidencia → 500, sin SMS, sesión `ACTIVE`; el reintento devuelve `processed` y cierra todo.
+- `pnpm check` ✅ · `pnpm --filter backend test` ✅ 151/151 · `test:integration` ⏳ en local

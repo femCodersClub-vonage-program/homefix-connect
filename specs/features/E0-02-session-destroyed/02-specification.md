@@ -10,9 +10,12 @@
 | 1 | `reason = serverRotation` | Nada (Q1) · log `info` | 200 `ignored` |
 | 2 | `sessionId` sin `VideoSession` | Nada · log `warn` | **200 `ignored`** (antes 400) |
 | 3 | Sesión ya `ENDED` | Nada | 200 `already_processed` |
-| 4 | Siempre a partir de aquí | `VideoSession` → `ENDED` + `endedAt` | — |
-| 5 | Incidencia ≠ `VISIT_ASSIGNED`, visita ≠ `CONFIRMED` o sesión que no llegó a `ACTIVE` | Solo el paso 4, **sin SMS** · log `info` con los estados | 200 `already_processed` (Q2) |
-| 6 | Resto (visita abierta) | Incidencia → `VIDEO_COMPLETED` + `sendPostVisit` (como la A4) | 200 `processed` |
+| 4 | Visita abierta (incidencia `VISIT_ASSIGNED` + visita `CONFIRMED` + sesión que llegó a `ACTIVE`) | Incidencia → `VIDEO_COMPLETED` + `sendPostVisit` (como la A4) | — |
+| 5 | **Siempre**, al final | `VideoSession` → `ENDED` + `endedAt` | — |
+| 6 | Si el paso 4 se hizo | — | 200 `processed` |
+| 7 | Si no (visita cerrada o sesión que no llegó a `ACTIVE`) | Solo el paso 5, **sin SMS** · log `info` con los estados | 200 `already_processed` (Q2) |
+
+> **26/11 · Orden cambiado:** la sesión se cierra **al final**. Antes se cerraba primero: si fallaba guardar la incidencia (500), Vonage reintentaba, veía la sesión `ENDED` → `already_processed` y la visita no se cerraba nunca. Ahora el reintento la encuentra aún `ACTIVE` y repite el flujo (test «si falla cerrar la visita → 500 … el reintento la cierra»).
 
 Sin cambios: firma (401), payload inválido (400), otros eventos (`ignored`), fallo de SMS (200 + log `error`).
 
