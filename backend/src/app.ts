@@ -16,12 +16,14 @@ import { healthRouter } from './routes/health.js';
 import { incidentsRouter } from './routes/incidents.js';
 import { createVideoEventsRouter } from './routes/video-events.js';
 import { createVideoTokensRouter } from './routes/video-tokens.js';
+import { createVisitStatusRouter } from './routes/visit-status.js';
 import {
   createVonageMessagesClient,
   MessagingPostVisitNotifier,
   type PostVisitNotifier,
 } from './services/messaging.service.js';
 import type { VideoService } from './services/video.service.js';
+import { VisitStatusService } from './services/visit-status.service.js';
 import { createVonageVideoService } from './services/vonage-video.service.js';
 
 // Dependencias opcionales: los tests inyectan stubs; la app real usa los valores por defecto.
@@ -96,6 +98,14 @@ export function createApp(deps: AppDeps = {}) {
       videoSessionRepo,
       postVisitNotifier,
       getSignatureSecret: deps.getSignatureSecret,
+    }),
+  );
+
+  // E1-02: la técnica marca la visita como Completada / No completada.
+  app.use(
+    '/api',
+    createVisitStatusRouter({
+      visitStatusService: new VisitStatusService({ incidentRepo, postVisitNotifier }),
     }),
   );
 
