@@ -12,7 +12,7 @@ import {
   VIDEO_IDS,
 } from './helpers/video.js';
 
-// A5 · POST /api/webhooks/video-events con Prisma real (INT-V9 a INT-V13).
+// A5 · POST /api/webhooks/video-events con Prisma real (INT-V9 a INT-V13; E0-02: INT-V14/V15).
 // Firma real (X3) con secreto de test; aviso post-visita real (B3) con SMS falsos.
 // Spec: specs/features/A5-video-tests/02-specification.md
 
@@ -83,13 +83,14 @@ describe('POST /api/webhooks/video-events con Postgres (integración)', () => {
     expect(session.endedAt).toEqual(afterFirst.endedAt);
   });
 
-  it('INT-V11 · sesión desconocida → 400 y la BD no cambia', async () => {
+  it('INT-V11 · sesión desconocida → 200 ignored (E0-02) y la BD no cambia', async () => {
     await seedVideoVisitData(prisma, { sessionStatus: 'ACTIVE', vonageSessionId: VIDEO_IDS.vonageSession });
     const { app, messaging } = createVideoTestApp();
 
     const res = await sendEvent(app, sessionDestroyed('vonage-desconocida'));
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ status: 'ignored' });
     const { session, incident, notifications } = await dbState();
     expect(session.status).toBe('ACTIVE');
     expect(incident.status).toBe('VISIT_ASSIGNED');
@@ -138,5 +139,40 @@ describe('POST /api/webhooks/video-events con Postgres (integración)', () => {
     expect(session).toMatchObject({ status: 'ENDED', vonageSessionId: VIDEO_IDS.vonageSession });
     expect(incident.status).toBe('VIDEO_COMPLETED');
     expect(notifications).toHaveLength(2);
+  });
+
+  it('INT-V14 · E0-02: incidencia ya VIDEO_COMPLETED con sesión ACTIVE → la sesión se cierra, sin SMS', async () => {
+    await seedVideoVisitData(prisma, { sessionStatus: 'ACTIVE', vonageSessionId: VIDEO_IDS.vonageSession });
+    await prisma.incident.update({ where: { id: IDS.incident }, data: { status: 'VIDEO_COMPLETED' } });
+    const { app, messaging } = createVideoTestApp();
+
+    const res = await sendEvent(app, sessionDestroyed());
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ status: 'already_processed' });
+    const { session, incident, notifications } = await dbState();
+    expect(session.status).toBe('ENDED');
+    expect(session.endedAt).toBeInstanceOf(Date);
+    expect(incident.status).toBe('VIDEO_COMPLETED');
+    expect(notifications).toHaveLength(0);
+    expect(messaging.sendSms).not.toHaveBeenCalled();
+  });
+
+  it('INT-V15 · E0-02: reason serverRotation → 200 ignored y la BD no cambia', async () => {
+    await seedVideoVisitData(prisma, { sessionStatus: 'ACTIVE', vonageSessionId: VIDEO_IDS.vonageSession });
+    const { app, messaging } = createVideoTestApp();
+
+    const res = await sendEvent(app, {
+      ...sessionDestroyed(),
+      reason: 'serverRotation',
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ status: 'ignored' });
+    const { session, incident, notifications } = await dbState();
+    expect(session.status).toBe('ACTIVE');
+    expect(incident.status).toBe('VISIT_ASSIGNED');
+    expect(notifications).toHaveLength(0);
+    expect(messaging.sendSms).not.toHaveBeenCalled();
   });
 });
