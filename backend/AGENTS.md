@@ -36,7 +36,7 @@ backend/
 │   │   └── video-session.repo.ts  # VideoSessionRepo (A2/A3/A4)
 │   └── routes/               # un archivo por recurso
 │       ├── health.ts         # GET /api/health
-│       └── incidents.ts      # GET /api/incidents/:id  (provisional, ver T1)
+│       └── incidents.ts      # GET /api/incidents/:id (repo inyectado, 401/403: E0-05)
 └── logs/app.jsonl            # generado al ejecutar (ignorado por git)
 ```
 
@@ -64,7 +64,8 @@ Postgres.
 2. Valida la entrada con `zod` (body, params, query).
 3. Implementa en `routes/<recurso>.ts`, o extrae a `services/` si hay lógica.
 4. Devuelve el JSON del contrato y el status correcto:
-   `400` entrada inválida · `403` rol no autorizado · `404` no existe ·
+   `400` entrada inválida · `401` sin cabeceras de usuario (o firma inválida) ·
+   `403` rol no autorizado · `404` no existe ·
    `409` estado no válido · `500` error inesperado.
 5. Errores: `res.status(x).json({ error: 'mensaje' })`. Para lo inesperado,
    lanza y deja que lo capture el `errorHandler` de `app.ts`.
