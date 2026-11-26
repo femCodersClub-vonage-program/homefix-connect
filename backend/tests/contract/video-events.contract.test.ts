@@ -4,6 +4,7 @@ import type {
   VideoSession,
   VideoSessionStatus,
   Visit,
+  VisitStatus,
 } from "@prisma/client";
 import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -50,6 +51,7 @@ const SENT_RESULT: PostVisitResult = {
 type FixtureOptions = {
   incidentStatus?: IncidentStatus;
   sessionStatus?: VideoSessionStatus;
+  visitStatus?: VisitStatus;
 };
 
 function makeIncident(options: FixtureOptions = {}): IncidentWithRelations {
@@ -79,7 +81,7 @@ function makeIncident(options: FixtureOptions = {}): IncidentWithRelations {
     id: "visit_demo",
     incidentId: "inc_demo",
     scheduledAt: now,
-    status: "CONFIRMED",
+    status: options.visitStatus ?? "CONFIRMED",
     completedAt: null,
     createdAt: now,
     updatedAt: now,
@@ -229,7 +231,7 @@ describe("POST /api/webhooks/video-events", () => {
     expect(postVisitNotifier.sendPostVisit).not.toHaveBeenCalled();
   });
 
-  it("CA-4 · sesión desconocida → 400 Unknown session", async () => {
+  it("CA-4 · sesión desconocida → 200 ignored (E0-02: antes 400)", async () => {
     const { app, postVisitNotifier } = setup();
 
     const res = await post(
@@ -237,8 +239,8 @@ describe("POST /api/webhooks/video-events", () => {
       event({ sessionId: "no-existe", event: "sessionDestroyed", reason: "clientDisconnected" }),
     );
 
-    expect(res.status).toBe(400);
-    expect(res.body).toEqual({ error: "Unknown session" });
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ status: "ignored" });
     expect(postVisitNotifier.sendPostVisit).not.toHaveBeenCalled();
   });
 
@@ -257,7 +259,7 @@ describe("POST /api/webhooks/video-events", () => {
     expect(postVisitNotifier.sendPostVisit).toHaveBeenCalledWith("inc_demo", "");
   });
 
-  it.each(["forceDisconnected", "mediaIdle", "serverRotation"])(
+  it.each(["forceDisconnected", "mediaIdle"])(
     "CA-5 · también cierra con los otros reason oficiales (%s)",
     async (reason) => {
       const { app, postVisitNotifier } = setup();
@@ -289,7 +291,7 @@ describe("POST /api/webhooks/video-events", () => {
     expect(postVisitNotifier.sendPostVisit).not.toHaveBeenCalled();
   });
 
-  it("CA-7 · incidencia ya VIDEO_COMPLETED → already_processed sin cambios ni SMS", async () => {
+  it("CA-7 · incidencia ya VIDEO_COMPLETED → already_processed, cierra la sesión (E0-02) y sin SMS", async () => {
     const { app, videoSessionRepo, postVisitNotifier } = setup({
       incidentStatus: "VIDEO_COMPLETED",
     });
@@ -299,7 +301,7 @@ describe("POST /api/webhooks/video-events", () => {
     expect(res.body).toEqual({ status: "already_processed" });
     expect(postVisitNotifier.sendPostVisit).not.toHaveBeenCalled();
     expect((await videoSessionRepo.findByVonageSessionId(VONAGE_SESSION_ID))?.status).toBe(
-      "ACTIVE",
+      "ENDED",
     );
   });
 
@@ -331,5 +333,68 @@ describe("POST /api/webhooks/video-events", () => {
     expect(logInfo).toHaveBeenCalled();
     expect(logged).not.toContain("60000000");
     expect(logged).not.toContain("Visita realizada");
+  });
+
+  // ── E0-02 · endurecer sessionDestroyed ─────────────────────────────────
+
+  it("E0-02 · reason serverRotation → 200 ignored, no toca sesión, incidencia ni SMS", async () => {
+    const { app, incidentRepo, videoSessionRepo, postVisitNotifier } = setup();
+
+    const res = await post(
+      app,
+      event({ sessionId: VONAGE_SESSION_ID, event: "sessionDestroyed", reason: "serverRotation" }),
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ status: "ignored" });
+    expect((await videoSessionRepo.findByVonageSessionId(VONAGE_SESSION_ID))?.status).toBe(
+      "ACTIVE",
+    );
+    expect((await incidentRepo.findById("inc_demo"))?.status).toBe("VISIT_ASSIGNED");
+    expect(postVisitNotifier.sendPostVisit).not.toHaveBeenCalled();
+  });
+
+  it.each(["COMPLETED", "CANCELLED"] as const)(
+    "E0-02 · visita ya %s → cierra la sesión, sin tocar la incidencia ni SMS",
+    async (visitStatus) => {
+      const { app, incidentRepo, videoSessionRepo, postVisitNotifier } = setup({ visitStatus });
+
+      const res = await post(app, SESSION_DESTROYED);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ status: "already_processed" });
+      const session = await videoSessionRepo.findByVonageSessionId(VONAGE_SESSION_ID);
+      expect(session?.status).toBe("ENDED");
+      expect(session?.endedAt).toBeInstanceOf(Date);
+      expect((await incidentRepo.findById("inc_demo"))?.status).toBe("VISIT_ASSIGNED");
+      expect(postVisitNotifier.sendPostVisit).not.toHaveBeenCalled();
+    },
+  );
+
+  it("E0-02 · incidencia CLOSED → cierra la sesión sin SMS", async () => {
+    const { app, videoSessionRepo, postVisitNotifier } = setup({ incidentStatus: "CLOSED" });
+
+    const res = await post(app, SESSION_DESTROYED);
+
+    expect(res.body).toEqual({ status: "already_processed" });
+    expect((await videoSessionRepo.findByVonageSessionId(VONAGE_SESSION_ID))?.status).toBe(
+      "ENDED",
+    );
+    expect(postVisitNotifier.sendPostVisit).not.toHaveBeenCalled();
+  });
+
+  it("E0-02 · sesión que nunca llegó a ACTIVE (PENDING) → se cierra sin cerrar la visita ni SMS", async () => {
+    const { app, incidentRepo, videoSessionRepo, postVisitNotifier } = setup({
+      sessionStatus: "PENDING",
+    });
+
+    const res = await post(app, SESSION_DESTROYED);
+
+    expect(res.body).toEqual({ status: "already_processed" });
+    expect((await videoSessionRepo.findByVonageSessionId(VONAGE_SESSION_ID))?.status).toBe(
+      "ENDED",
+    );
+    expect((await incidentRepo.findById("inc_demo"))?.status).toBe("VISIT_ASSIGNED");
+    expect(postVisitNotifier.sendPostVisit).not.toHaveBeenCalled();
   });
 });
