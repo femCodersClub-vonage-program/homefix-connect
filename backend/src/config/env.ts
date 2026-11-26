@@ -32,17 +32,13 @@ const envSchema = z.object({
 
   // Vonage: opcionales en el scaffold. Las tareas que las usen deben validar
   // su presencia en el momento de usarlas (ver A1/A2/B1).
-  VONAGE_API_KEY: z.string().optional(),
-  VONAGE_API_SECRET: z.string().optional(),
+  // E0-06: fuera VONAGE_API_KEY/SECRET (Video y Messages usan applicationId +
+  // clave privada), *_PHONE (los teléfonos salen de User.phone en la BD) y
+  // WEBHOOK_BASE_URL (la URL de ngrok se configura en el dashboard de Vonage).
   VONAGE_APPLICATION_ID: z.string().optional(),
   VONAGE_PRIVATE_KEY_PATH: z.string().optional(),
   VONAGE_MESSAGES_FROM: z.string().optional(),
-  MANAGER_PHONE: z.string().optional(),
-  TENANT_PHONE: z.string().optional(),
-  TECHNICIAN_PHONE: z.string().optional(),
   VONAGE_SIGNATURE_SECRET: z.string().optional(),
-
-  WEBHOOK_BASE_URL: z.string().url().default('http://localhost:3000'),
 
   // E0-04: rate limit de POST /api/video-tokens por usuario (X-User-Id).
   VIDEO_TOKENS_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
