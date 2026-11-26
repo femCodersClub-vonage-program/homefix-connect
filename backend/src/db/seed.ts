@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger.js';
 import { prisma } from './client.js';
 
 /**
@@ -92,16 +93,21 @@ async function main() {
     },
   });
 
-  console.log('Seed OK');
-  console.log(`  incidencia : ${IDS.incident} (VISIT_ASSIGNED)`);
-  console.log(`  visita     : ${IDS.visit} (CONFIRMED, ${scheduledAt.toISOString()})`);
-  console.log(`  video      : ${IDS.videoSession} (PENDING)`);
-  console.log(`  usuarios   : ${IDS.tenant}, ${IDS.technician}, ${IDS.manager}`);
+  // E0-06: logger en vez de console.log (AGENTS §9.1).
+  logger.info(
+    {
+      incident: `${IDS.incident} (VISIT_ASSIGNED)`,
+      visit: `${IDS.visit} (CONFIRMED, ${scheduledAt.toISOString()})`,
+      videoSession: `${IDS.videoSession} (PENDING)`,
+      users: [IDS.tenant, IDS.technician, IDS.manager],
+    },
+    'seed ok',
+  );
 }
 
 main()
   .catch((error) => {
-    console.error('Seed falló:', error);
+    logger.error({ err: error }, 'seed failed');
     process.exitCode = 1;
   })
   .finally(async () => {

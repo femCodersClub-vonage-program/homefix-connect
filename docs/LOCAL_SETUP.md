@@ -149,7 +149,7 @@ Qué hace cada uno y **qué deberías ver**:
 | `cp -n .env.example .env` | Crea tu archivo de configuración local. El `-n` **no pisa** uno existente | Sin salida |
 | `pnpm db:up` | Descarga (la primera vez) y arranca PostgreSQL en Docker | `Container homefix-db Started` |
 | `pnpm db:push` | Crea las tablas en la base de datos | `Your database is now in sync with your Prisma schema` |
-| `pnpm db:seed` | Mete datos de demo (incidencia, visita, sesión de vídeo) | `Seed OK` + 4 líneas con los IDs |
+| `pnpm db:seed` | Mete datos de demo (incidencia, visita, sesión de vídeo) si no existen | Una línea JSON con `"msg":"seed ok"` y los IDs |
 
 Notas de la primera vez:
 
@@ -161,12 +161,13 @@ Notas de la primera vez:
 Ejemplo de la salida del seed:
 
 ```
-Seed OK
-  incidencia : inc_demo (VISIT_ASSIGNED)
-  visita     : visit_demo (CONFIRMED, 2026-11-11T18:14:31.739Z)
-  video      : vs_demo (PENDING)
-  usuarios   : usr_tenant_demo, usr_technician_demo, usr_manager_demo
+{"level":30,"time":1764090000000,"service":"homefix-api","incident":"inc_demo (VISIT_ASSIGNED)","visit":"visit_demo (CONFIRMED, 2026-11-11T18:14:31.739Z)","videoSession":"vs_demo (PENDING)","users":["usr_tenant_demo","usr_technician_demo","usr_manager_demo"],"msg":"seed ok"}
 ```
+
+> ⚠️ `pnpm db:seed` **no restaura** la demo después de una llamada: si los datos
+> ya existen no los toca (no devuelve la incidencia a `VISIT_ASSIGNED`, no
+> reinicia la sesión de vídeo ni borra las `Notification`). Para volver a empezar
+> la demo usa `pnpm db:reset` (borra la base de datos y vuelve a sembrar).
 
 > `db:push` y `db:seed` **solo hacen falta la primera vez**, o cuando alguien
 > cambie el schema de la base de datos. En el día a día basta con `pnpm db:up`.
@@ -368,7 +369,8 @@ Si `pnpm check` termina sin escribir nada más, está bien: en estas herramienta
 |---------|-----------|
 | Reiniciar backend/frontend tras un cambio de código | No hace falta: `tsx watch` y Vite recargan solos. Si se quedan colgados: `Ctrl + C` y `pnpm dev` |
 | Reiniciar Postgres | `pnpm db:down` y `pnpm db:up` (los datos se conservan) |
-| Volver a cargar los datos de demo | `pnpm db:seed` (es idempotente, no duplica) |
+| Volver a cargar los datos de demo | `pnpm db:seed` (idempotente: crea lo que falte, **no** restaura una demo ya usada) |
+| Volver a empezar la demo tras una llamada | `pnpm db:reset` ⚠️ **borra los datos** |
 | Recrear la base de datos entera | `pnpm db:reset` ⚠️ **borra los datos** |
 | Recuperar el `.env` si lo borraste | `cp -n .env.example .env` |
 | Reinstalar dependencias desde cero | `rm -rf node_modules backend/node_modules frontend/node_modules` y `pnpm install` |

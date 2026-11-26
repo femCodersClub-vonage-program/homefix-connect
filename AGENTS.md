@@ -316,7 +316,8 @@ Reglas:
   escritas a mano que dupliquen el contrato.
 - En desarrollo, Vite reenvía `/api` a `http://localhost:3000` (sin CORS).
 - Los errores de la API son JSON: `{ "error": "<mensaje>" }` con el status
-  adecuado (`400`, `403`, `404`, `409`, `500`).
+  adecuado (`400`, `401`, `403`, `404`, `409`, `500`). `401` = faltan las
+  cabeceras del login simulado (E0-05) o firma de webhook inválida (X3).
 
 ---
 
