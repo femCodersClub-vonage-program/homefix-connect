@@ -105,7 +105,7 @@
 ```bash
 # 1. Levantar entorno local
 pnpm dev          # backend:3000 + frontend:5173 (concurrently)
-ngrok http 3000   # actualizar WEBHOOK_BASE_URL en backend/.env
+ngrok http 3000   # poner la URL https en el dashboard de Vonage
 docker-compose up -d postgres  # si no está arriba
 
 # 2. Cambiar spec (ej. añadir campo en openapi.yaml / schema.prisma)
