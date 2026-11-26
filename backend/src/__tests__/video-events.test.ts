@@ -414,9 +414,11 @@ describe("POST /api/webhooks/video-events", () => {
     expect(postVisitNotifier.sendPostVisit).not.toHaveBeenCalled();
     expect((await videoSessionRepo.findByVonageSessionId(VONAGE_SESSION_ID))?.status).toBe("ACTIVE");
 
-    // Reintento de Vonage: ahora sí completa y avisa.
+    // Reintento de Vonage: ahora sí cierra la visita, avisa y cierra la sesión.
     const retry = await post(app, SESSION_DESTROYED);
     expect(retry.body).toEqual({ status: "processed" });
+    expect((await incidentRepo.findById("inc_demo"))?.status).toBe("VIDEO_COMPLETED");
     expect(postVisitNotifier.sendPostVisit).toHaveBeenCalledOnce();
+    expect((await videoSessionRepo.findByVonageSessionId(VONAGE_SESSION_ID))?.status).toBe("ENDED");
   });
 });
