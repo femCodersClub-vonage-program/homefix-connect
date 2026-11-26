@@ -95,6 +95,9 @@ model Visit {
   incident    Incident    @relation(fields: [incidentId], references: [id], onDelete: Cascade)
   scheduledAt DateTime
   status      VisitStatus @default(PENDING)
+  // E1-01: cuándo la marcó Completada la técnica (o la red de seguridad de A4).
+  // Null mientras no esté COMPLETED (también si se corrige a CANCELLED).
+  completedAt DateTime?
 
   videoSession VideoSession?
 
@@ -126,13 +129,21 @@ model Notification {
   status      NotificationStatus  @default(QUEUED)
   // Plantilla usada ("post_visit") para poder cambiarla sin migrar datos.
   template    String
-  providerMessageId String?
+  // message_uuid de Vonage. Único (E1-01): la B4 busca por él. Nullable: los
+  // FAILED sin id no chocan (Postgres admite varios NULL en una unique).
+  providerMessageId String?   @unique
   error       String?
+  // Hora en la que se envió a Vonage (B3).
   sentAt      DateTime?
+  // E1-01: hora de entrega confirmada por la B4 (delivered).
+  deliveredAt DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // E1-01: una notificación por incidencia + plantilla + destinataria.
+  // La E4-02 trata el choque (P2002) como ALREADY_SENT.
+  @@unique([incidentId, template, recipientId])
   @@index([incidentId])
   @@index([status])
 }

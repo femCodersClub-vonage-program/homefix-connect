@@ -61,6 +61,7 @@ function makeIncident(
     incidentId: 'inc_demo',
     scheduledAt: now,
     status: 'CONFIRMED',
+    completedAt: null,
     createdAt: now,
     updatedAt: now,
     videoSession,
@@ -94,6 +95,7 @@ function makeVideoSession(
     incidentId: 'inc_demo',
     scheduledAt: now,
     status: 'CONFIRMED',
+    completedAt: null,
     createdAt: now,
     updatedAt: now,
   };

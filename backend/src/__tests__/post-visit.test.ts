@@ -97,6 +97,7 @@ function makeNotification(overrides: Partial<Notification> = {}): Notification {
     providerMessageId: 'msg-anterior',
     error: null,
     sentAt: now,
+    deliveredAt: null,
     createdAt: now,
     updatedAt: now,
     ...overrides,
