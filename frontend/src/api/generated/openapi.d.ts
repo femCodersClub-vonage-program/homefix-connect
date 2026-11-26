@@ -165,6 +165,17 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
+                /** @description Demasiadas peticiones del mismo usuario (X-User-Id) en la ventana (por defecto 10 por minuto). Se reintenta pasados `Retry-After` segundos. */
+                429: {
+                    headers: {
+                        /** @description Segundos que faltan para que se reinicie la ventana */
+                        "Retry-After"?: number;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
                 /** @description Falta configuración del servidor (VONAGE_APPLICATION_ID) */
                 500: {
                     headers: {

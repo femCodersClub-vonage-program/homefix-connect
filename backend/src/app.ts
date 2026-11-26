@@ -6,6 +6,7 @@ import { pinoHttp } from 'pino-http';
 import { env } from './config/env.js';
 import { prisma } from './db/client.js';
 import { logger } from './lib/logger.js';
+import type { RateLimitOptions } from './middleware/rateLimitByUser.js';
 import { captureRawBody } from './lib/rawBody.js';
 import type { IncidentRepo } from './repositories/incident.repo.js';
 import { PrismaIncidentRepo } from './repositories/prisma-incident.repo.js';
@@ -34,6 +35,8 @@ export type AppDeps = {
   postVisitNotifier?: PostVisitNotifier;
   /** A4: secreto de firma de webhooks (los tests inyectan uno). */
   getSignatureSecret?: () => string | undefined;
+  /** E0-04: límite de POST /video-tokens (los tests inyectan uno con reloj falso). */
+  videoTokensRateLimit?: RateLimitOptions;
 };
 
 export function createApp(deps: AppDeps = {}) {
@@ -86,6 +89,10 @@ export function createApp(deps: AppDeps = {}) {
       videoSessionRepo,
       videoService,
       applicationId,
+      rateLimit: deps.videoTokensRateLimit ?? {
+        max: env.VIDEO_TOKENS_RATE_LIMIT_MAX,
+        windowMs: env.VIDEO_TOKENS_RATE_LIMIT_WINDOW_MS,
+      },
     }),
   );
 
