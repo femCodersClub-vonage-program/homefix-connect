@@ -1,6 +1,10 @@
 import { Router } from "express";
 import { z } from "zod";
 
+import {
+  rateLimitByUser,
+  type RateLimitOptions,
+} from "../middleware/rateLimitByUser.js";
 import type { IncidentRepo } from "../repositories/incident.repo.js";
 import type { VideoSessionRepo } from "../repositories/video-session.repo.js";
 import type { VideoService } from "../services/video.service.js";
@@ -10,6 +14,8 @@ export type VideoTokensDeps = {
   videoSessionRepo: VideoSessionRepo;
   videoService: VideoService;
   applicationId: string | undefined;
+  /** E0-04: límite de peticiones por usuario (X-User-Id). */
+  rateLimit: RateLimitOptions;
 };
 
 // Express pasa los nombres de las cabeceras a minúsculas.
@@ -23,7 +29,8 @@ const bodySchema = z.object({
 });
 
 export function createVideoTokensRouter(deps: VideoTokensDeps) {
-  const { incidentRepo, videoSessionRepo, videoService, applicationId } = deps;
+  const { incidentRepo, videoSessionRepo, videoService, applicationId, rateLimit } =
+    deps;
   const router = Router();
 
   // Guard: si llegan dos peticiones a la vez para la misma VideoSession sin
@@ -57,7 +64,8 @@ export function createVideoTokensRouter(deps: VideoTokensDeps) {
     return creation;
   }
 
-  router.post("/video-tokens", async (req, res, next) => {
+  // E0-04: el límite va antes de todo; cuenta cualquier petición con X-User-Id (Q3).
+  router.post("/video-tokens", rateLimitByUser(rateLimit), async (req, res, next) => {
     try {
       // 400 · formato de cabeceras y body
       const headers = headersSchema.safeParse(req.headers);
