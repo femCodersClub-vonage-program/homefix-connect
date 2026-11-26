@@ -34,6 +34,8 @@ type FixtureOptions = {
   visitStatus?: VisitStatus;
   sessionStatus?: VideoSessionStatus;
   vonageSessionId?: string | null;
+  /** E0-04: límite de peticiones (por defecto, el de la app: 10/min). */
+  rateLimitMax?: number;
 };
 
 // Incidencia igual que la del seed (inc_demo), con estados configurables.
@@ -126,6 +128,10 @@ function setup(options: FixtureOptions = {}) {
     videoSessionRepo,
     videoService,
     applicationId: APP_ID,
+    videoTokensRateLimit: {
+      max: options.rateLimitMax ?? 10,
+      windowMs: 60_000,
+    },
   });
   return { app, incidentRepo, videoSessionRepo, videoService };
 }
@@ -304,5 +310,64 @@ describe("POST /api/video-tokens", () => {
       .send({ incidentId: "inc_demo" });
 
     expect(res.status).toBe(409);
+  });
+
+  it("CA-10 · E0-04: la petición 11 del mismo usuario en un minuto → 429 con Retry-After", async () => {
+    const { app } = setup();
+    const ask = () =>
+      request(app)
+        .post("/api/video-tokens")
+        .set(TENANT)
+        .send({ incidentId: "inc_demo" });
+
+    for (let i = 0; i < 10; i++) {
+      expect((await ask()).status).toBe(200);
+    }
+    const res = await ask();
+
+    expect(res.status).toBe(429);
+    expect(res.body).toEqual({ error: expect.any(String) });
+    expect(Number(res.headers["retry-after"])).toBeGreaterThanOrEqual(1);
+  });
+
+  it("CA-11 · E0-04: el límite es por usuario (la técnica no se ve afectada)", async () => {
+    const { app } = setup({ rateLimitMax: 1 });
+
+    await request(app).post("/api/video-tokens").set(TENANT).send({ incidentId: "inc_demo" });
+    const tenantAgain = await request(app)
+      .post("/api/video-tokens")
+      .set(TENANT)
+      .send({ incidentId: "inc_demo" });
+    const technician = await request(app)
+      .post("/api/video-tokens")
+      .set(TECHNICIAN)
+      .send({ incidentId: "inc_demo" });
+
+    expect(tenantAgain.status).toBe(429);
+    expect(technician.status).toBe(200);
+  });
+
+  it("CA-12 · E0-04: también cuentan las peticiones rechazadas (409)", async () => {
+    const { app } = setup({ visitStatus: "PENDING", rateLimitMax: 1 });
+    const ask = () =>
+      request(app)
+        .post("/api/video-tokens")
+        .set(TENANT)
+        .send({ incidentId: "inc_demo" });
+
+    expect((await ask()).status).toBe(409);
+    expect((await ask()).status).toBe(429);
+  });
+
+  it("CA-13 · E0-04: sin X-User-Id sigue siendo 400, no 429", async () => {
+    const { app } = setup({ rateLimitMax: 1 });
+
+    for (let i = 0; i < 3; i++) {
+      const res = await request(app)
+        .post("/api/video-tokens")
+        .set("X-User-Role", "TENANT")
+        .send({ incidentId: "inc_demo" });
+      expect(res.status).toBe(400);
+    }
   });
 });

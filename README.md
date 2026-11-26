@@ -73,7 +73,8 @@ pnpm db:seed     # datos de demo (incidencia, visita, sesión)
 ```
 
 `db:push` y `db:seed` solo hacen falta la primera vez, o cuando cambie
-`backend/prisma/schema.prisma`.
+`backend/prisma/schema.prisma`. `db:seed` **no** restaura la demo después de una
+llamada: para volver a empezar usa `pnpm db:reset` (borra los datos).
 
 ### Variables de entorno
 
@@ -88,9 +89,7 @@ LOG_LEVEL=info
 
 DATABASE_URL=postgresql://homefix:homefix@localhost:5432/homefix?schema=public
 
-# Vonage Video
-VONAGE_API_KEY=
-VONAGE_API_SECRET=
+# Vonage Video (applicationId + clave privada; no hace falta API key/secret)
 VONAGE_APPLICATION_ID=
 VONAGE_PRIVATE_KEY_PATH=./private.key
 
@@ -99,8 +98,7 @@ VONAGE_MESSAGES_FROM=
 # Los teléfonos de destino salen de User.phone en la BD (seed).
 # No se usan variables MANAGER_PHONE / TENANT_PHONE / TECHNICIAN_PHONE.
 
-# Webhooks (ngrok en local)
-WEBHOOK_BASE_URL=http://localhost:3000
+# Webhooks (ngrok en local: la URL https va en el dashboard de Vonage)
 VONAGE_SIGNATURE_SECRET=
 
 # Frontend (solo se exponen las VITE_*)
@@ -127,7 +125,7 @@ Webhooks locales (a partir de la semana 3, con Vonage real):
 
 ```bash
 ngrok http 3000
-# copia la URL https en WEBHOOK_BASE_URL del .env y en el dashboard de Vonage
+# copia la URL https en el dashboard de Vonage (callbacks de Video y Messages)
 ```
 
 Comprobar que la base de datos responde:
