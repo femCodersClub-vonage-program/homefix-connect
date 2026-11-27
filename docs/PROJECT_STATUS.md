@@ -8,6 +8,14 @@
 > **Sustituye** al estado del 20/11. Este documento se ha reconstruido leyendo el
 > código, el contrato, los tests y el tablero, no solo las descripciones de los PR.
 > No es una lista de tareas: para eso está [`docs/TASKS.md`](./TASKS.md).
+>
+> **Actualización 27/11/2026:** C7 (alternar cámara) entra en el MVP base y sale
+> del alcance extendido. El cambio de alcance se hace antes del código en un PR
+> de docs/spec. La implementación usa `Publisher.cycleVideo()` del SDK 2.36.0 y
+> **no recrea el publisher**: hacerlo dispara `streamDestroyed` en la otra
+> pestaña y `handleRemoteGone()` (`useVideoCall.ts:219`) cuelga su llamada. El
+> botón dice "Alternar cámara" porque el SDK no garantiza saber si la activa es
+> frontal o trasera. Issue #46 y spec en `specs/features/C7-camera-switch/`.
 
 ---
 

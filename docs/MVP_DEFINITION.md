@@ -107,6 +107,21 @@ Entonces muestra un aviso: "Visita finalizada. Notificaciones enviadas a gestora
 Y el botón "Entrar a la videollamada" queda deshabilitado con el texto "Visita realizada"
 ```
 
+### Escenario 5: alternar cámara durante la visita
+
+```gherkin
+Dado una videollamada activa entre inquilina y técnica
+Y la inquilina ve su vídeo local
+Cuando la inquilina pulsa "Alternar cámara"
+Entonces el SDK cambia a la siguiente cámara disponible en el mismo publisher
+Y la sesión, el token y el vídeo remoto no cambian
+Y la técnica sigue viendo y oyendo a la inquilina
+Y si no hay otra cámara o el cambio falla, la llamada continúa sin avisos
+```
+
+> El control no promete "cámara frontal" ni "trasera": el SDK solo expone
+> `Publisher.cycleVideo()` y en escritorio puede no existir una segunda cámara.
+
 ---
 
 ## 5. Fuera de alcance (no MVP)
@@ -129,7 +144,7 @@ Y el botón "Entrar a la videollamada" queda deshabilitado con el texto "Visita 
 
 | API | Qué usamos | Para qué en el MVP |
 |---|---|---|
-| **Vonage Video** | Server SDK (crear sesión, generar tokens) + webhook `session.end` + Web SDK (WebRTC 1-a-1) | Videollamada inquilina ↔ técnica |
+| **Vonage Video** | Server SDK (crear sesión, generar tokens) + webhook `session.end` + Web SDK (WebRTC 1-a-1, `Publisher.cycleVideo()`) | Videollamada inquilina ↔ técnica y cambio de cámara sin colgar |
 | **Vonage Messages** | Server SDK (enviar SMS) | 2 SMS al terminar. El webhook `message.status` (seguimiento de entrega) queda **post-MVP** |
 
 > Los paths, payloads y cabeceras concretas viven en `backend/openapi.yaml`
@@ -146,4 +161,5 @@ Y el botón "Entrar a la videollamada" queda deshabilitado con el texto "Visita 
 - [ ] Los SMS llegan a gestora e inquilina (números de prueba)
 - [ ] **Post-MVP:** los webhooks de entrega actualizan el estado en la base de datos
 - [ ] El frontend confirma visualmente que la visita terminó
+- [ ] Durante la visita se puede alternar cámara sin colgar ni perder al remoto
 - [ ] El README explica cómo configurar, ejecutar y probar sin publicar secretos
