@@ -64,7 +64,7 @@ hook.
 - La URL base sale de `VITE_API_BASE_URL` (vacía en local: el proxy de Vite
   resuelve `/api`).
 
-## 5. Pantalla de vídeo (C3/C4)
+## 5. Pantalla de vídeo (C3/C4/C7)
 
 - El token **lo genera el backend**. El frontend nunca ve `VONAGE_API_SECRET` ni
   la private key.
@@ -81,6 +81,11 @@ hook.
   dejar la UI colgada. No hay reconexión automática ni timeout en el MVP.
 - C8 expone `hangup()` en `useVideoCall` y un botón "Colgar" en `VideoCall`. La
   desconexión es local; el cierre global sigue por webhook de Vonage.
+- C7 expone `switchCamera()` en `useVideoCall` y un botón "Alternar cámara" en
+  `VideoCall`. Usa `publisher.cycleVideo()` sobre el publisher activo: **no** se
+  recrea el publisher ni se llama a `unpublish()`, para no colgar al par vía
+  `streamDestroyed`. El fallo es silencioso y el botón se deshabilita fuera de
+  `connected`. El texto no promete cámara frontal/trasera.
 - C5 detecta la transición a `VIDEO_COMPLETED` con `useFinishToast` y muestra
   `FinishToast` durante 5 s. `useIncident` consulta cada 5 s hasta que la
   incidencia se completa. Sin librería de toast.

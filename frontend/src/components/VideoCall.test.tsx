@@ -35,6 +35,7 @@ type MockSession = {
 
 type MockPublisher = {
   destroy: ReturnType<typeof vi.fn>;
+  cycleVideo: ReturnType<typeof vi.fn>;
 };
 
 type MockSubscriber = {
@@ -77,7 +78,10 @@ beforeEach(() => {
     subscribe: vi.fn(),
     unsubscribe: vi.fn(),
   };
-  publisher = { destroy: vi.fn() };
+  publisher = {
+    destroy: vi.fn(),
+    cycleVideo: vi.fn().mockResolvedValue({ deviceId: 'cam_demo' }),
+  };
   subscriber = { stream: { streamId: 'stream_remote' } };
 
   sdk.initSession.mockReturnValue(session);
@@ -446,6 +450,130 @@ describe('VideoCall', () => {
     expect(screen.getByText('Desconectada')).toBeInTheDocument();
     expect(
       screen.queryByText('No se pudo iniciar la videollamada'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('alterna la cámara sin crear otro publisher', async () => {
+    renderCall();
+    await screen.findByText('Conectada');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Alternar cámara' }));
+
+    expect(publisher.cycleVideo).toHaveBeenCalledTimes(1);
+    expect(sdk.initPublisher).toHaveBeenCalledTimes(1);
+    expect(session.publish).toHaveBeenCalledTimes(1);
+    expect(session.unpublish).not.toHaveBeenCalled();
+  });
+
+  it('mantiene la llamada conectada al alternar', async () => {
+    renderCall();
+    await screen.findByText('Conectada');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Alternar cámara' }));
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(screen.getByText('Conectada')).toBeInTheDocument();
+    expect(screen.queryByText('Desconectada')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Alternar cámara' })).toBeEnabled();
+  });
+
+  it('no muestra error si falla el cambio de cámara', async () => {
+    publisher.cycleVideo.mockRejectedValueOnce(new Error('sin cámara'));
+
+    renderCall();
+    await screen.findByText('Conectada');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Alternar cámara' }));
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(screen.getByText('Conectada')).toBeInTheDocument();
+    expect(
+      screen.queryByText('No se pudo iniciar la videollamada'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('deshabilita "Alternar cámara" mientras conecta y cuando termina', async () => {
+    let connectCallback: Callback | undefined;
+    session.connect.mockImplementation((_token: string, callback: Callback) => {
+      connectCallback = callback;
+      return session;
+    });
+
+    renderCall();
+
+    expect(screen.getByRole('button', { name: 'Alternar cámara' })).toBeDisabled();
+
+    act(() => {
+      connectCallback?.();
+    });
+
+    await screen.findByText('Conectada');
+    expect(screen.getByRole('button', { name: 'Alternar cámara' })).toBeEnabled();
+
+    emit('sessionDisconnected');
+    expect(screen.getByRole('button', { name: 'Alternar cámara' })).toBeDisabled();
+  });
+
+  it('ignora un segundo clic mientras el cambio está en curso', async () => {
+    let resolveCycle: (() => void) | undefined;
+    publisher.cycleVideo.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveCycle = () => resolve({ deviceId: 'cam_demo' });
+        }),
+    );
+
+    renderCall();
+    await screen.findByText('Conectada');
+
+    const button = screen.getByRole('button', { name: 'Alternar cámara' });
+    fireEvent.click(button);
+    fireEvent.click(button);
+
+    expect(publisher.cycleVideo).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      resolveCycle?.();
+    });
+  });
+
+  it('destruye solo el publisher activo al desmontar durante un cambio', async () => {
+    let resolveCycle: (() => void) | undefined;
+    publisher.cycleVideo.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveCycle = () => resolve({ deviceId: 'cam_demo' });
+        }),
+    );
+
+    const { unmount } = renderCall();
+    await screen.findByText('Conectada');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Alternar cámara' }));
+    unmount();
+    await act(async () => {
+      resolveCycle?.();
+    });
+
+    expect(publisher.destroy).toHaveBeenCalledTimes(1);
+    expect(session.unpublish).toHaveBeenCalledTimes(1);
+  });
+
+  it('no toca el vídeo remoto al alternar', async () => {
+    renderCall();
+    await screen.findByText('Conectada');
+    emit('streamCreated', { stream: remoteStream() });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Alternar cámara' }));
+
+    expect(session.subscribe).toHaveBeenCalledTimes(1);
+    expect(session.unsubscribe).not.toHaveBeenCalled();
+    expect(
+      screen.queryByText('Esperando a la otra persona…'),
     ).not.toBeInTheDocument();
   });
 });

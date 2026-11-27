@@ -15,6 +15,7 @@ export type VideoCallState = {
 
 export type VideoCallResult = VideoCallState & {
   hangup: () => void;
+  switchCamera: () => void;
 };
 
 type UseVideoCallParams = {
@@ -53,6 +54,7 @@ export function useVideoCall({
   const [status, setStatus] = useState<VideoCallStatus>('idle');
   const [remoteConnected, setRemoteConnected] = useState(false);
   const hangupRef = useRef<() => void>(() => undefined);
+  const switchRef = useRef<() => void>(() => undefined);
 
   useEffect(() => {
     const target = containerRef.current;
@@ -65,6 +67,8 @@ export function useVideoCall({
     let disposed = false;
     let cleaned = false;
     let publishStarted = false;
+    let connected = false;
+    let switching = false;
     let session: OT.Session | null = null;
     let publisher: OT.Publisher | null = null;
     let subscriber: OT.Subscriber | null = null;
@@ -88,6 +92,7 @@ export function useVideoCall({
     function cleanup() {
       if (cleaned) return;
       cleaned = true;
+      connected = false;
 
       const activeSession = session;
       const activePublisher = publisher;
@@ -134,13 +139,34 @@ export function useVideoCall({
 
     hangupRef.current = () => {
       if (disposed || cleaned) return;
+      connected = false;
       setStatus('ended');
       setRemoteConnected(false);
       cleanup();
     };
 
+    switchRef.current = () => {
+      const activePublisher = publisher;
+      if (disposed || cleaned || switching || !connected || !activePublisher) {
+        return;
+      }
+
+      switching = true;
+      try {
+        void activePublisher
+          .cycleVideo()
+          .catch(() => undefined)
+          .finally(() => {
+            switching = false;
+          });
+      } catch {
+        switching = false;
+      }
+    };
+
     function fail() {
       if (disposed || cleaned) return;
+      connected = false;
       setStatus('error');
       setRemoteConnected(false);
       cleanup();
@@ -148,6 +174,7 @@ export function useVideoCall({
 
     function handleDisconnected() {
       if (disposed || cleaned) return;
+      connected = false;
       setStatus('ended');
       setRemoteConnected(false);
       cleanup();
@@ -155,6 +182,7 @@ export function useVideoCall({
 
     function handleConnectionDestroyed() {
       if (disposed || cleaned) return;
+      connected = false;
       setStatus('ended');
       setRemoteConnected(false);
       cleanup();
@@ -162,6 +190,7 @@ export function useVideoCall({
 
     function handleRemoteGone() {
       if (disposed || cleaned) return;
+      connected = false;
       setStatus('ended');
       setRemoteConnected(false);
       cleanup();
@@ -234,6 +263,7 @@ export function useVideoCall({
             fail();
             return;
           }
+          connected = true;
           setStatus('connected');
         });
       } catch {
@@ -321,6 +351,7 @@ export function useVideoCall({
       disposed = true;
       cleanup();
       hangupRef.current = () => undefined;
+      switchRef.current = () => undefined;
     };
   }, [applicationId, sessionId, token, containerRef, remoteContainerRef]);
 
@@ -328,5 +359,6 @@ export function useVideoCall({
     status,
     remoteConnected,
     hangup: () => hangupRef.current(),
+    switchCamera: () => switchRef.current(),
   };
 }
