@@ -5,6 +5,7 @@ export type VideoCallStatus =
   | 'idle'
   | 'connecting'
   | 'connected'
+  | 'remote_disconnected'
   | 'error'
   | 'ended';
 
@@ -173,6 +174,8 @@ export function useVideoCall({
     }
 
     function handleDisconnected() {
+      // Evento de Vonage: la sesión se cerró completamente (server-side).
+      // Esto pasa cuando se va el último participante o el servidor rota.
       if (disposed || cleaned) return;
       connected = false;
       setStatus('ended');
@@ -181,19 +184,21 @@ export function useVideoCall({
     }
 
     function handleConnectionDestroyed() {
+      // El remoto se fue (cerró pestaña, perdió conexión, etc.).
+      // El local SE QUEDA en la llamada tipo Meet.
       if (disposed || cleaned) return;
-      connected = false;
-      setStatus('ended');
       setRemoteConnected(false);
-      cleanup();
+      setStatus('remote_disconnected');
+      unsubscribeRemote();
     }
 
     function handleRemoteGone() {
+      // El stream remoto se destruyó (el remoto dejó de publicar).
+      // El local SE QUEDA en la llamada.
       if (disposed || cleaned) return;
-      connected = false;
-      setStatus('ended');
       setRemoteConnected(false);
-      cleanup();
+      setStatus('remote_disconnected');
+      unsubscribeRemote();
     }
 
     function handleStreamCreated(event: StreamEvent) {

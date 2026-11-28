@@ -224,7 +224,7 @@ describe('VideoCall', () => {
     expect(session.subscribe).toHaveBeenCalledTimes(1);
   });
 
-  it('desuscribe el stream remoto y pasa a "Desconectada"', async () => {
+  it('desuscribe el stream remoto y muestra "La otra persona se ha desconectado" (el local sigue en la llamada)', async () => {
     renderCall();
     await screen.findByText('Conectada');
 
@@ -232,7 +232,14 @@ describe('VideoCall', () => {
     emit('streamDestroyed', { stream: remoteStream() });
 
     expect(session.unsubscribe).toHaveBeenCalledWith(subscriber);
-    expect(screen.getByText('Desconectada')).toBeInTheDocument();
+    // El status (aria-live) muestra el mensaje
+    expect(screen.getByRole('status')).toHaveTextContent('La otra persona se ha desconectado');
+    // El botón Colgar sigue habilitado para que el local pueda colgar cuando quiera
+    expect(screen.getByRole('button', { name: 'Colgar' })).toBeEnabled();
+    // La sesión NO se limpia (no se llama unpublish, destroy, disconnect)
+    expect(session.unpublish).not.toHaveBeenCalled();
+    expect(publisher.destroy).not.toHaveBeenCalled();
+    expect(session.disconnect).not.toHaveBeenCalled();
   });
 
   it('ignora un "streamDestroyed" de otro stream', async () => {
@@ -246,20 +253,31 @@ describe('VideoCall', () => {
     expect(screen.getByText('Conectada')).toBeInTheDocument();
   });
 
-  it.each(['sessionDisconnected', 'connectionDestroyed'])(
-    'pasa a "Desconectada" con %s y limpia los recursos',
-    async (eventName) => {
-      renderCall();
-      await screen.findByText('Conectada');
+  it('pasa a "Desconectada" con sessionDisconnected y limpia los recursos (cierre global)', async () => {
+    renderCall();
+    await screen.findByText('Conectada');
 
-      emit(eventName);
+    emit('sessionDisconnected');
 
-      expect(screen.getByText('Desconectada')).toBeInTheDocument();
-      expect(session.unpublish).toHaveBeenCalledWith(publisher);
-      expect(publisher.destroy).toHaveBeenCalled();
-      expect(session.disconnect).toHaveBeenCalled();
-    },
-  );
+    expect(screen.getByText('Desconectada')).toBeInTheDocument();
+    expect(session.unpublish).toHaveBeenCalledWith(publisher);
+    expect(publisher.destroy).toHaveBeenCalled();
+    expect(session.disconnect).toHaveBeenCalled();
+  });
+
+  it('muestra "La otra persona se ha desconectado" con connectionDestroyed (el local sigue)', async () => {
+    renderCall();
+    await screen.findByText('Conectada');
+
+    emit('connectionDestroyed');
+
+    expect(screen.getByRole('status')).toHaveTextContent('La otra persona se ha desconectado');
+    expect(screen.getByRole('button', { name: 'Colgar' })).toBeEnabled();
+    // La sesión NO se limpia
+    expect(session.unpublish).not.toHaveBeenCalled();
+    expect(publisher.destroy).not.toHaveBeenCalled();
+    expect(session.disconnect).not.toHaveBeenCalled();
+  });
 
   it('muestra error si la suscripción falla y limpia los recursos', async () => {
     session.subscribe.mockImplementation(
@@ -369,7 +387,7 @@ describe('VideoCall', () => {
     expect(screen.getByRole('button', { name: 'Colgar' })).toBeEnabled();
   });
 
-  it('deshabilita "Colgar" mientras conecta y cuando termina', async () => {
+  it('deshabilita "Colgar" mientras conecta; habilitado en connected y remote_disconnected', async () => {
     let connectCallback: Callback | undefined;
     session.connect.mockImplementation((_token: string, callback: Callback) => {
       connectCallback = callback;
@@ -387,6 +405,11 @@ describe('VideoCall', () => {
     await screen.findByText('Conectada');
     expect(screen.getByRole('button', { name: 'Colgar' })).toBeEnabled();
 
+    // En remote_disconnected el botón sigue habilitado
+    emit('connectionDestroyed');
+    expect(screen.getByRole('button', { name: 'Colgar' })).toBeEnabled();
+
+    // Solo en ended (sessionDisconnected) se deshabilita
     emit('sessionDisconnected');
     expect(screen.getByRole('button', { name: 'Colgar' })).toBeDisabled();
   });
