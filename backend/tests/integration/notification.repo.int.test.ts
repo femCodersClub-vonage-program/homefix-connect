@@ -174,4 +174,39 @@ describe('PrismaNotificationRepo (integración)', () => {
     expect(row.providerMessageId).toBe('msg-e2-02');
     expect(row.sentAt).toEqual(created.sentAt);
   });
+
+  it('INT-4 · E2-02: findByProviderMessageId encuentra por message_uuid y null si no existe', async () => {
+    const created = await repo.create({
+      incidentId: IDS.incident,
+      recipientId: IDS.tenant,
+      template: 'post_visit',
+      status: 'QUEUED',
+      providerMessageId: 'msg-e2-02',
+      sentAt: new Date(),
+    });
+
+    expect((await repo.findByProviderMessageId('msg-e2-02'))?.id).toBe(created.id);
+    expect(await repo.findByProviderMessageId('no-existe')).toBeNull();
+  });
+
+  it('INT-5 · E2-02: updateStatus guarda estado, deliveredAt y error sin tocar el resto', async () => {
+    const created = await repo.create({
+      incidentId: IDS.incident,
+      recipientId: IDS.tenant,
+      template: 'post_visit',
+      status: 'QUEUED',
+      providerMessageId: 'msg-e2-02',
+      sentAt: new Date(),
+    });
+    const deliveredAt = new Date('2026-11-25T20:00:05.000Z');
+
+    await repo.updateStatus(created.id, { status: 'DELIVERED', deliveredAt, error: null });
+    const row = await prisma.notification.findUniqueOrThrow({ where: { id: created.id } });
+
+    expect(row.status).toBe('DELIVERED');
+    expect(row.deliveredAt).toEqual(deliveredAt);
+    expect(row.error).toBeNull();
+    expect(row.providerMessageId).toBe('msg-e2-02');
+    expect(row.sentAt).toEqual(created.sentAt);
+  });
 });

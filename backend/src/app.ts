@@ -16,6 +16,7 @@ import { PrismaVideoSessionRepo } from './repositories/prisma-video-session.repo
 import type { VideoSessionRepo } from './repositories/video-session.repo.js';
 import { healthRouter } from './routes/health.js';
 import { createIncidentsRouter } from './routes/incidents.js';
+import { createNotificationsRouter } from './routes/notifications.js';
 import { createMessageStatusRouter } from './routes/message-status.js';
 import { createVideoEventsRouter } from './routes/video-events.js';
 import { createVideoTokensRouter } from './routes/video-tokens.js';
@@ -139,6 +140,9 @@ export function createApp(deps: AppDeps = {}) {
     '/api',
     createCloseIncidentRouter({ closeIncidentService: new CloseIncidentService(incidentRepo) }),
   );
+
+  // E3-01: SMS de la incidencia (participantes), sin teléfonos.
+  app.use('/api', createNotificationsRouter({ incidentRepo, notificationRepo }));
 
   app.use(notFoundHandler);
   app.use(errorHandler);

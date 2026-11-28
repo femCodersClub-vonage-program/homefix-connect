@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import type { Notification, NotificationStatus } from '@prisma/client';
+import type { Notification, NotificationStatus, Prisma } from '@prisma/client';
 
 // B3 · Registros Notification del aviso post-visita.
 // Spec: specs/features/B3-notifications/02-specification.md
@@ -22,6 +22,13 @@ export type NotificationStatusUpdate = {
   deliveredAt?: Date | null;
   error?: string | null;
 };
+
+/** E3-01 · Notificación con lo mínimo de la destinataria (sin teléfono ni email). */
+export type NotificationWithRecipient = Prisma.NotificationGetPayload<{
+  include: { recipient: { select: { id: true; name: true; role: true } } };
+}>;
+
+export type NotificationRecipient = NotificationWithRecipient['recipient'];
 
 /**
  * E4-02 · Ya existe una Notification con la misma incidencia + plantilla +
@@ -46,14 +53,20 @@ export interface NotificationRepo {
   findByProviderMessageId(providerMessageId: string): Promise<Notification | null>;
   /** E2-02: solo cambia los campos que se pasan. */
   updateStatus(id: string, data: NotificationStatusUpdate): Promise<Notification>;
+  /** E3-01: las de la incidencia, de la más antigua a la más nueva. */
+  findByIncidentId(incidentId: string): Promise<NotificationWithRecipient[]>;
 }
 
 /** Stub en memoria: no toca Postgres. */
 export class InMemoryNotificationRepo implements NotificationRepo {
   private readonly notifications: Notification[] = [];
 
-  constructor(seed: Notification[] = []) {
+  private readonly recipients = new Map<string, NotificationRecipient>();
+
+  /** `recipients`: id, nombre y rol de las destinatarias (para `findByIncidentId`). */
+  constructor(seed: Notification[] = [], recipients: NotificationRecipient[] = []) {
     this.notifications.push(...seed);
+    for (const recipient of recipients) this.recipients.set(recipient.id, recipient);
   }
 
   /** Solo para tests: lo guardado hasta ahora. No forma parte de la interface. */
@@ -112,5 +125,18 @@ export class InMemoryNotificationRepo implements NotificationRepo {
     if (data.error !== undefined) notification.error = data.error;
     notification.updatedAt = new Date();
     return notification;
+  }
+
+  async findByIncidentId(incidentId: string): Promise<NotificationWithRecipient[]> {
+    return this.notifications
+      .filter((n) => n.incidentId === incidentId)
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+      .map((n) => {
+        const recipient = this.recipients.get(n.recipientId);
+        if (!recipient) {
+          throw new Error(`Recipient ${n.recipientId} not seeded in InMemoryNotificationRepo`);
+        }
+        return { ...n, recipient };
+      });
   }
 }

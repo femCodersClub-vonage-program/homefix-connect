@@ -5,6 +5,7 @@ import {
   NotificationAlreadyExistsError,
   type NotificationRepo,
   type NotificationStatusUpdate,
+  type NotificationWithRecipient,
 } from './notification.repo.js';
 
 /** E4-02: P2002 sobre la unique `[incidentId, template, recipientId]` (no sobre `providerMessageId`). */
@@ -50,5 +51,13 @@ export class PrismaNotificationRepo implements NotificationRepo {
 
   async updateStatus(id: string, data: NotificationStatusUpdate): Promise<Notification> {
     return this.prisma.notification.update({ where: { id }, data });
+  }
+
+  async findByIncidentId(incidentId: string): Promise<NotificationWithRecipient[]> {
+    return this.prisma.notification.findMany({
+      where: { incidentId },
+      include: { recipient: { select: { id: true, name: true, role: true } } },
+      orderBy: { createdAt: 'asc' },
+    });
   }
 }
