@@ -16,8 +16,24 @@ export type NotificationCreate = {
   sentAt?: Date | null;
 };
 
+/**
+ * E4-02 · Ya existe una Notification con la misma incidencia + plantilla +
+ * destinataria (`@@unique([incidentId, template, recipientId])`, P2002 en Prisma).
+ * `sendPostVisit` lo trata como `ALREADY_SENT`.
+ */
+export class NotificationAlreadyExistsError extends Error {
+  constructor(incidentId: string, template: string, recipientId: string) {
+    super(
+      `Notification already exists for incident ${incidentId}, template ${template}, recipient ${recipientId}`,
+    );
+    this.name = 'NotificationAlreadyExistsError';
+  }
+}
+
 export interface NotificationRepo {
-  existsForIncident(incidentId: string, template: string): Promise<boolean>;
+  /** E4-02: ids de las destinatarias que ya tienen registro (cualquier estado) para esa incidencia y plantilla. */
+  findRecipientIds(incidentId: string, template: string): Promise<string[]>;
+  /** Lanza `NotificationAlreadyExistsError` si choca con la unique por destinataria. */
   create(data: NotificationCreate): Promise<Notification>;
 }
 
@@ -34,13 +50,24 @@ export class InMemoryNotificationRepo implements NotificationRepo {
     return this.notifications;
   }
 
-  async existsForIncident(incidentId: string, template: string): Promise<boolean> {
-    return this.notifications.some(
-      (n) => n.incidentId === incidentId && n.template === template,
-    );
+  async findRecipientIds(incidentId: string, template: string): Promise<string[]> {
+    const ids = this.notifications
+      .filter((n) => n.incidentId === incidentId && n.template === template)
+      .map((n) => n.recipientId);
+    return [...new Set(ids)];
   }
 
   async create(data: NotificationCreate): Promise<Notification> {
+    // E4-02: la misma unique que en Postgres.
+    const duplicate = this.notifications.some(
+      (n) =>
+        n.incidentId === data.incidentId &&
+        n.template === data.template &&
+        n.recipientId === data.recipientId,
+    );
+    if (duplicate) {
+      throw new NotificationAlreadyExistsError(data.incidentId, data.template, data.recipientId);
+    }
     const now = new Date();
     const notification: Notification = {
       id: randomUUID(),

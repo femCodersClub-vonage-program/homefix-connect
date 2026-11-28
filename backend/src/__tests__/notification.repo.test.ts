@@ -1,7 +1,10 @@
 import type { Notification } from '@prisma/client';
 import { describe, expect, it } from 'vitest';
 
-import { InMemoryNotificationRepo } from '../repositories/notification.repo.js';
+import {
+  InMemoryNotificationRepo,
+  NotificationAlreadyExistsError,
+} from '../repositories/notification.repo.js';
 
 // B3 · InMemoryNotificationRepo — CA-9.
 // Spec: specs/features/B3-notifications/02-specification.md
@@ -27,13 +30,13 @@ function makeNotification(overrides: Partial<Notification> = {}): Notification {
 }
 
 describe('InMemoryNotificationRepo', () => {
-  it('CA-9 · existsForIncident es true solo con el mismo incidentId y template', async () => {
+  it('E4-02 · findRecipientIds devuelve las destinatarias con registro de esa incidencia y plantilla', async () => {
     const repo = new InMemoryNotificationRepo([
       makeNotification({ id: 'a', incidentId: 'inc_otra' }),
       makeNotification({ id: 'b', template: 'otra_plantilla' }),
     ]);
 
-    expect(await repo.existsForIncident('inc_demo', 'post_visit')).toBe(false);
+    expect(await repo.findRecipientIds('inc_demo', 'post_visit')).toEqual([]);
 
     await repo.create({
       incidentId: 'inc_demo',
@@ -42,8 +45,31 @@ describe('InMemoryNotificationRepo', () => {
       status: 'FAILED',
       error: 'VonageNetworkError',
     });
+    await repo.create({
+      incidentId: 'inc_demo',
+      recipientId: 'usr_manager_demo',
+      template: 'post_visit',
+      status: 'QUEUED',
+    });
 
-    expect(await repo.existsForIncident('inc_demo', 'post_visit')).toBe(true);
+    expect(await repo.findRecipientIds('inc_demo', 'post_visit')).toEqual([
+      'usr_tenant_demo',
+      'usr_manager_demo',
+    ]);
+  });
+
+  it('E4-02 · create con la misma incidencia + plantilla + destinataria lanza NotificationAlreadyExistsError', async () => {
+    const repo = new InMemoryNotificationRepo([makeNotification()]);
+
+    await expect(
+      repo.create({
+        incidentId: 'inc_demo',
+        recipientId: 'usr_tenant_demo',
+        template: 'post_visit',
+        status: 'QUEUED',
+      }),
+    ).rejects.toBeInstanceOf(NotificationAlreadyExistsError);
+    expect(repo.items).toHaveLength(1);
   });
 
   it('CA-9 · create rellena id, channel SMS, fechas y null en lo opcional', async () => {

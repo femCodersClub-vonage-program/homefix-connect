@@ -5,7 +5,10 @@ import {
   InMemoryIncidentRepo,
   type IncidentWithRelations,
 } from '../repositories/incident.repo.js';
-import { InMemoryNotificationRepo } from '../repositories/notification.repo.js';
+import {
+  InMemoryNotificationRepo,
+  NotificationAlreadyExistsError,
+} from '../repositories/notification.repo.js';
 import {
   buildPostVisitBody,
   type MessagingService,
@@ -266,15 +269,16 @@ describe('MessagingPostVisitNotifier.sendPostVisit · Notification (B3)', () => 
     ]);
   });
 
-  it('B3 CA-2 · ya enviado: no llama a sendSms, no crea nada y devuelve ALREADY_SENT', async () => {
+  it('B3 CA-2 · ya enviado a las dos: no llama a sendSms, no crea nada y devuelve ALREADY_SENT', async () => {
     const { messaging, notifier, notificationRepo } = setup(makeIncident(), [
+      makeNotification({ id: 'ntf_gestora', recipientId: MANAGER.id, providerMessageId: 'msg-g' }),
       makeNotification(),
     ]);
 
     const result = await notifier.sendPostVisit('inc_demo', TECHNICIAN_NAME);
 
     expect(messaging.sendSms).not.toHaveBeenCalled();
-    expect(notificationRepo.items).toHaveLength(1);
+    expect(notificationRepo.items).toHaveLength(2);
     expect(result).toEqual({
       sent: [],
       failed: [],
@@ -286,14 +290,18 @@ describe('MessagingPostVisitNotifier.sendPostVisit · Notification (B3)', () => 
     expect(logInfo).toHaveBeenCalled();
   });
 
-  it('B3 CA-2 · ya enviado y sin gestora: solo la inquilina en ALREADY_SENT', async () => {
-    const { notifier } = setup(makeIncident({ managerId: null, manager: null }), [
+  it('B3 CA-2 · ya enviado y sin gestora: NO_MANAGER + la inquilina en ALREADY_SENT (E4-02)', async () => {
+    const { messaging, notifier } = setup(makeIncident({ managerId: null, manager: null }), [
       makeNotification(),
     ]);
 
     const result = await notifier.sendPostVisit('inc_demo', TECHNICIAN_NAME);
 
-    expect(result.skipped).toEqual([{ role: 'TENANT', reason: 'ALREADY_SENT' }]);
+    expect(messaging.sendSms).not.toHaveBeenCalled();
+    expect(result.skipped).toEqual([
+      { role: 'MANAGER', reason: 'NO_MANAGER' },
+      { role: 'TENANT', reason: 'ALREADY_SENT' },
+    ]);
   });
 
   it('B3 CA-3 · dos llamadas seguidas: 2 SMS en total y 2 Notification', async () => {
@@ -333,15 +341,16 @@ describe('MessagingPostVisitNotifier.sendPostVisit · Notification (B3)', () => 
     ]);
   });
 
-  it('B3 CA-5 · con una Notification FAILED previa no se reenvía', async () => {
+  it('B3 CA-5 · con una Notification FAILED previa a esa destinataria no se le reenvía (E4-02)', async () => {
     const { messaging, notifier } = setup(makeIncident(), [
       makeNotification({ status: 'FAILED', providerMessageId: null, sentAt: null, error: 'VonageNetworkError' }),
     ]);
 
     const result = await notifier.sendPostVisit('inc_demo', TECHNICIAN_NAME);
 
-    expect(messaging.sendSms).not.toHaveBeenCalled();
-    expect(result.skipped.every((s) => s.reason === 'ALREADY_SENT')).toBe(true);
+    expect(messaging.sendSms).toHaveBeenCalledTimes(1);
+    expect(messaging.sendSms).toHaveBeenCalledWith(MANAGER.phone, EXPECTED_BODY);
+    expect(result.skipped).toEqual([{ role: 'TENANT', reason: 'ALREADY_SENT' }]);
   });
 
   it('B3 CA-6 · sin gestora: solo la Notification de la inquilina y NO_MANAGER', async () => {
@@ -391,5 +400,97 @@ describe('MessagingPostVisitNotifier.sendPostVisit · Notification (B3)', () => 
       expect(text).not.toContain(TITLE);
       expect(text).not.toContain('60000000');
     }
+  });
+});
+
+// E4-02 · Idempotencia por destinataria.
+// Spec: specs/features/E4-02-notification-unique/02-specification.md
+describe('MessagingPostVisitNotifier.sendPostVisit · E4-02', () => {
+  it('E4-02 CA-1 · la gestora ya tiene registro: solo se envía a la inquilina', async () => {
+    const { messaging, notifier, notificationRepo } = setup(makeIncident(), [
+      makeNotification({ id: 'ntf_gestora', recipientId: MANAGER.id, providerMessageId: 'msg-g' }),
+    ]);
+    messaging.sendSms.mockReset().mockResolvedValue({ providerMessageId: 'msg-inquilina' });
+
+    const result = await notifier.sendPostVisit('inc_demo', TECHNICIAN_NAME);
+
+    expect(messaging.sendSms).toHaveBeenCalledTimes(1);
+    expect(messaging.sendSms).toHaveBeenCalledWith(TENANT.phone, EXPECTED_BODY);
+    expect(result).toEqual({
+      sent: [{ recipientId: TENANT.id, role: 'TENANT', providerMessageId: 'msg-inquilina' }],
+      failed: [],
+      skipped: [{ role: 'MANAGER', reason: 'ALREADY_SENT' }],
+    });
+    expect(notificationRepo.items).toHaveLength(2);
+  });
+
+  it('E4-02 CA-2 · un registro de otra plantilla no cuenta', async () => {
+    const { messaging, notifier } = setup(makeIncident(), [
+      makeNotification({ template: 'otra_plantilla' }),
+    ]);
+
+    const result = await notifier.sendPostVisit('inc_demo', TECHNICIAN_NAME);
+
+    expect(messaging.sendSms).toHaveBeenCalledTimes(2);
+    expect(result.skipped).toEqual([]);
+  });
+
+  it('E4-02 CA-3 · P2002 al guardar (llamada concurrente): ALREADY_SENT, no lanza y deja un warn', async () => {
+    const { messaging, notifier, notificationRepo } = setup();
+    const create = vi.spyOn(notificationRepo, 'create');
+    create.mockRejectedValueOnce(
+      new NotificationAlreadyExistsError('inc_demo', 'post_visit', MANAGER.id),
+    );
+
+    const result = await notifier.sendPostVisit('inc_demo', TECHNICIAN_NAME);
+
+    expect(messaging.sendSms).toHaveBeenCalledTimes(2);
+    expect(result).toEqual({
+      sent: [{ recipientId: TENANT.id, role: 'TENANT', providerMessageId: 'msg-inquilina' }],
+      failed: [],
+      skipped: [{ role: 'MANAGER', reason: 'ALREADY_SENT' }],
+    });
+    expect(logWarn).toHaveBeenCalledWith(
+      expect.objectContaining({ recipientId: MANAGER.id, role: 'MANAGER' }),
+      expect.stringContaining('already exists'),
+    );
+  });
+
+  it('E4-02 CA-3 · P2002 al guardar un FAILED: ALREADY_SENT y no aparece en failed', async () => {
+    const { messaging, notifier, notificationRepo } = setup();
+    messaging.sendSms
+      .mockReset()
+      .mockRejectedValueOnce(Object.assign(new Error('x'), { name: 'VonageNetworkError' }))
+      .mockResolvedValueOnce({ providerMessageId: 'msg-inquilina' });
+    vi.spyOn(notificationRepo, 'create').mockRejectedValueOnce(
+      new NotificationAlreadyExistsError('inc_demo', 'post_visit', MANAGER.id),
+    );
+
+    const result = await notifier.sendPostVisit('inc_demo', TECHNICIAN_NAME);
+
+    expect(result.failed).toEqual([]);
+    expect(result.skipped).toEqual([{ role: 'MANAGER', reason: 'ALREADY_SENT' }]);
+  });
+
+  it('E4-02 CA-4 · cualquier otro error al guardar se propaga', async () => {
+    const { notifier, notificationRepo } = setup();
+    vi.spyOn(notificationRepo, 'create').mockRejectedValueOnce(new Error('BD caída'));
+
+    await expect(notifier.sendPostVisit('inc_demo', TECHNICIAN_NAME)).rejects.toThrow('BD caída');
+  });
+
+  it('E4-02 CA-5 · todas con registro: no exige el nombre de la técnica', async () => {
+    const { messaging, notifier } = setup(
+      makeIncident({ technicianId: null, technician: null }),
+      [
+        makeNotification({ id: 'ntf_gestora', recipientId: MANAGER.id, providerMessageId: 'msg-g' }),
+        makeNotification(),
+      ],
+    );
+
+    const result = await notifier.sendPostVisit('inc_demo', '');
+
+    expect(messaging.sendSms).not.toHaveBeenCalled();
+    expect(result.skipped).toHaveLength(2);
   });
 });
