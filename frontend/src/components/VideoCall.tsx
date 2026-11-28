@@ -15,6 +15,7 @@ const statusLabels: Record<VideoCallStatus, string> = {
   idle: 'Preparando videollamada…',
   connecting: 'Conectando…',
   connected: 'Conectada',
+  remote_disconnected: 'La otra persona se ha desconectado',
   error: 'No se pudo iniciar la videollamada',
   ended: 'Desconectada',
 };
@@ -56,7 +57,7 @@ export function VideoCall({
       <button
         type="button"
         className="video-call__hangup"
-        disabled={status !== 'connected'}
+        disabled={status !== 'connected' && status !== 'remote_disconnected'}
         onClick={hangup}
       >
         Colgar
@@ -68,9 +69,11 @@ export function VideoCall({
             className="video-call__remote"
             aria-label="Vídeo remoto"
           />
-          {status === 'connected' && !remoteConnected ? (
+          {(status === 'connected' || status === 'remote_disconnected') && !remoteConnected ? (
             <p className="video-call__waiting">
-              Esperando a la otra persona…
+              {status === 'remote_disconnected'
+                ? 'La otra persona se ha desconectado'
+                : 'Esperando a la otra persona…'}
             </p>
           ) : null}
         </div>
