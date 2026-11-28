@@ -117,4 +117,52 @@ describe('sendPostVisit con Postgres (integración)', () => {
     expect(rows[0]).toMatchObject({ recipientId: IDS.tenant, status: 'QUEUED' });
     expect(result.skipped).toEqual([{ role: 'MANAGER', reason: 'NO_MANAGER' }]);
   });
+
+  it('INT-E4-3 · la gestora ya tiene registro: solo se envía a la inquilina (E4-02)', async () => {
+    await seedPostVisitData(prisma);
+    await prisma.notification.create({
+      data: {
+        incidentId: IDS.incident,
+        recipientId: IDS.manager,
+        template: 'post_visit',
+        status: 'FAILED',
+        error: 'VonageNetworkError',
+      },
+    });
+    const { messaging, notifier } = setup();
+    messaging.sendSms.mockReset().mockResolvedValue({ providerMessageId: 'msg-inquilina' });
+
+    const result = await notifier.sendPostVisit(IDS.incident, '');
+
+    expect(messaging.sendSms).toHaveBeenCalledTimes(1);
+    expect(result.skipped).toEqual([{ role: 'MANAGER', reason: 'ALREADY_SENT' }]);
+    const rows = await notificationsInDb();
+    expect(rows).toHaveLength(2);
+    expect(rows[1]).toMatchObject({ recipientId: IDS.tenant, status: 'QUEUED' });
+  });
+
+  it('INT-E4-4 · dos llamadas a la vez: una fila por destinataria y ningún 500', async () => {
+    await seedPostVisitData(prisma);
+    const messaging: MessagingService = {
+      sendSms: vi.fn().mockImplementation(async () => ({
+        providerMessageId: `msg-${Math.random().toString(36).slice(2)}`,
+      })),
+    };
+    const notifier = new MessagingPostVisitNotifier({
+      messaging,
+      incidentRepo: new PrismaIncidentRepo(prisma),
+      notificationRepo: new PrismaNotificationRepo(prisma),
+    });
+
+    const results = await Promise.all([
+      notifier.sendPostVisit(IDS.incident, ''),
+      notifier.sendPostVisit(IDS.incident, ''),
+    ]);
+
+    const rows = await notificationsInDb();
+    expect(rows).toHaveLength(2);
+    expect(new Set(rows.map((r) => r.recipientId))).toEqual(new Set([IDS.manager, IDS.tenant]));
+    const sent = results.flatMap((r) => r.sent);
+    expect(sent).toHaveLength(2);
+  });
 });

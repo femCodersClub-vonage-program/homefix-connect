@@ -31,16 +31,15 @@ paths:
           required: true
           schema:
             type: string
-        # Login simulado del MVP: el backend aún no las exige, pero el
-        # frontend ya las envía y el contrato debe reconocerlas.
+        # Login simulado del MVP (E0-05: obligatorias).
         - name: X-User-Id
           in: header
-          required: false
+          required: true
           schema:
             type: string
         - name: X-User-Role
           in: header
-          required: false
+          required: true
           schema:
             $ref: "#/components/schemas/Role"
       responses:
@@ -50,8 +49,26 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Incident"
+        "401":
+          description: Faltan las cabeceras X-User-Id / X-User-Role o el rol no existe
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: El usuario no participa en la incidencia con ese rol (inquilina, técnica o gestora)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "404":
           description: Incidencia no existe
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Error interno
           content:
             application/json:
               schema:
@@ -107,13 +124,287 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "429":
+          description: >
+            Demasiadas peticiones del mismo usuario (X-User-Id) en la ventana
+            (por defecto 10 por minuto). Se reintenta pasados `Retry-After` segundos.
+          headers:
+            Retry-After:
+              description: Segundos que faltan para que se reinicie la ventana
+              schema:
+                type: integer
+                minimum: 1
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Falta configuración del servidor (VONAGE_APPLICATION_ID)
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+
+  # ── MVP Extended (E1-01) ─────────────────────────────────────────────────
+  # Contrato de docs/MVP_EXTENDED.md §7.1. Cada endpoint lo implementa su issue
+  # (E1-02, E3-02, E3-01, E2-01); la A4 (video-events) ya existe.
+
+  /api/incidents/{id}/visit-status:
+    post:
+      summary: La técnica marca la visita como Completada o No completada (E1-02)
+      description: >
+        COMPLETED → Visit COMPLETED + completedAt, Incident VIDEO_COMPLETED y
+        SMS post-visita si no se enviaron ya. CANCELLED («No completada») →
+        Visit CANCELLED, completedAt null, Incident VISIT_ASSIGNED, sin SMS.
+        Se puede corregir COMPLETED ↔ CANCELLED mientras la incidencia no esté
+        CLOSED. Si un SMS falla, la visita queda en el estado elegido y el
+        resumen lo cuenta en `failed`.
+      parameters:
+        - $ref: "#/components/parameters/IncidentId"
+        - $ref: "#/components/parameters/UserId"
+        - $ref: "#/components/parameters/UserRole"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VisitStatusRequest"
+      responses:
+        "200":
+          description: Cambio aplicado o la visita ya estaba en ese estado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VisitStatusResponse"
+        "400":
+          description: Cabeceras o body inválidos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: No es la técnica asignada a esta incidencia (o el rol no es TECHNICIAN)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: La incidencia no existe
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: La incidencia está CLOSED o la visita no tiene sesión de vídeo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/incidents/{id}/close:
+    post:
+      summary: La gestora cierra la incidencia cuando la visita está completada (E3-02)
+      description: >
+        «Informe listo» = Visit COMPLETED e Incident VIDEO_COMPLETED. No hay
+        modelo de informe en el MVP Extended.
+      parameters:
+        - $ref: "#/components/parameters/IncidentId"
+        - $ref: "#/components/parameters/UserId"
+        - $ref: "#/components/parameters/UserRole"
+      responses:
+        "200":
+          description: Incidencia cerrada (o ya lo estaba)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CloseIncidentResponse"
+        "400":
+          description: Cabeceras inválidas
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: No es la gestora asignada a esta incidencia (o el rol no es MANAGER)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: La incidencia no existe
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: La visita no está COMPLETED o la incidencia no está en VIDEO_COMPLETED («Report not ready»)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/incidents/{id}/notifications:
+    get:
+      summary: Notificaciones (SMS) de una incidencia, sin teléfonos (E3-01)
+      parameters:
+        - $ref: "#/components/parameters/IncidentId"
+        - $ref: "#/components/parameters/UserId"
+        - $ref: "#/components/parameters/UserRole"
+      responses:
+        "200":
+          description: Lista de notificaciones (puede estar vacía)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationList"
+        "400":
+          description: Cabeceras inválidas
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: El usuario no participa en la incidencia
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: La incidencia no existe
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/webhooks/video-events:
+    post:
+      summary: Session Monitoring de Vonage Video (A4; endurecido en E0-02, fallback en E1-04)
+      description: >
+        Lo llama Vonage, no el frontend. Solo `sessionDestroyed` tiene efecto;
+        el resto de eventos responde `ignored`.
+      security:
+        - VonageSignature: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VideoEvent"
+      responses:
+        "200":
+          description: Evento procesado, repetido o ignorado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookAck"
+        "400":
+          description: Payload inválido (sin `event`, o `sessionDestroyed` sin `sessionId`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Firma ausente o inválida (X3)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Secreto de firma no configurado o error de base de datos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/webhooks/message-status:
+    post:
+      summary: Estado de entrega de un SMS de Vonage Messages (B4 → E2-01)
+      description: >
+        Lo llama Vonage, no el frontend. Solo actualiza Notification (nunca
+        Incident ni Visit). submitted → SUBMITTED; delivered/read → DELIVERED
+        (+ deliveredAt); rejected/undeliverable → FAILED (+ error). Nunca
+        retrocede. `message_uuid` desconocido → `ignored`.
+      security:
+        - VonageSignature: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MessageStatusEvent"
+      responses:
+        "200":
+          description: Estado aplicado, repetido o mensaje desconocido
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookAck"
+        "400":
+          description: Payload inválido
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Firma ausente o inválida (X3)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Secreto de firma no configurado o error de base de datos (Vonage reintenta)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
 components:
+  securitySchemes:
+    VonageSignature:
+      # X3: JWT HS256 firmado con VONAGE_SIGNATURE_SECRET y con payload_hash.
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    IncidentId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    # Login simulado del MVP (ver docs/ARCHITECTURE.md).
+    UserId:
+      name: X-User-Id
+      in: header
+      required: true
+      schema:
+        type: string
+    UserRole:
+      name: X-User-Role
+      in: header
+      required: true
+      schema:
+        $ref: "#/components/schemas/Role"
+
   schemas:
     Error:
       type: object
@@ -216,6 +507,11 @@ components:
                 scheduledAt:
                   type: string
                   format: date-time
+                # E1-01: cuándo se completó (null si no está COMPLETED).
+                # Opcional hasta que GET /incidents/:id lo devuelva (E1-02/E0-05).
+                completedAt:
+                  type: [string, "null"]
+                  format: date-time
                 videoSession:
                   oneOf:
                     - type: "null"
@@ -226,3 +522,136 @@ components:
                           type: string
                         status:
                           $ref: "#/components/schemas/VideoSessionStatus"
+
+    # ── MVP Extended (E1-01) ───────────────────────────────────────────────
+
+    VisitStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          # COMPLETED = «Completada» · CANCELLED = «No completada» (D4, D5)
+          type: string
+          enum: [COMPLETED, CANCELLED]
+
+    NotificationSummary:
+      # Resumen de sendPostVisit: cuántos SMS se enviaron, fallaron u omitieron.
+      type: object
+      required: [sent, failed, skipped]
+      properties:
+        sent:
+          type: integer
+          minimum: 0
+        failed:
+          type: integer
+          minimum: 0
+        skipped:
+          type: integer
+          minimum: 0
+
+    VisitStatusResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [completed, not_completed, unchanged]
+        # Solo al pasar a COMPLETED (es cuando se intentan los SMS).
+        notifications:
+          $ref: "#/components/schemas/NotificationSummary"
+
+    CloseIncidentResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [closed, already_closed]
+
+    Notification:
+      # Sin teléfonos ni emails (D-03).
+      type: object
+      required: [id, recipient, channel, status, template, sentAt, deliveredAt, error]
+      properties:
+        id:
+          type: string
+        recipient:
+          type: object
+          required: [id, name, role]
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            role:
+              $ref: "#/components/schemas/Role"
+        channel:
+          type: string
+          enum: [SMS]
+        status:
+          $ref: "#/components/schemas/NotificationStatus"
+        template:
+          type: string
+        sentAt:
+          type: [string, "null"]
+          format: date-time
+        deliveredAt:
+          type: [string, "null"]
+          format: date-time
+        error:
+          type: [string, "null"]
+
+    NotificationList:
+      type: object
+      required: [notifications]
+      properties:
+        notifications:
+          type: array
+          items:
+            $ref: "#/components/schemas/Notification"
+
+    WebhookAck:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [processed, already_processed, ignored]
+
+    VideoEvent:
+      # Vonage manda más campos (projectId, timestamp, connection, stream…);
+      # el backend solo usa estos.
+      type: object
+      required: [event]
+      properties:
+        event:
+          type: string
+          description: sessionCreated, connectionCreated, streamCreated, sessionDestroyed…
+        sessionId:
+          type: string
+        reason:
+          type: string
+          description: En sessionDestroyed — clientDisconnected, forceDisconnected, mediaIdle o serverRotation
+      additionalProperties: true
+
+    MessageStatusEvent:
+      # Vonage manda más campos (to, from, channel, usage…); el backend solo usa estos.
+      type: object
+      required: [message_uuid, status, timestamp]
+      properties:
+        message_uuid:
+          type: string
+        status:
+          type: string
+          description: submitted, delivered, rejected, undeliverable (o read si el canal lo envía)
+        timestamp:
+          type: string
+          format: date-time
+        error:
+          type: object
+          properties:
+            title:
+              type: string
+            detail:
+              type: string
+      additionalProperties: true

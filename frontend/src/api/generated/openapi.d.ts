@@ -55,9 +55,9 @@ export interface paths {
         get: {
             parameters: {
                 query?: never;
-                header?: {
-                    "X-User-Id"?: string;
-                    "X-User-Role"?: components["schemas"]["Role"];
+                header: {
+                    "X-User-Id": string;
+                    "X-User-Role": components["schemas"]["Role"];
                 };
                 path: {
                     id: string;
@@ -75,8 +75,35 @@ export interface paths {
                         "application/json": components["schemas"]["Incident"];
                     };
                 };
+                /** @description Faltan las cabeceras X-User-Id / X-User-Role o el rol no existe */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description El usuario no participa en la incidencia con ese rol (inquilina, técnica o gestora) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
                 /** @description Incidencia no existe */
                 404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error interno */
+                500: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -165,7 +192,417 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
+                /** @description Demasiadas peticiones del mismo usuario (X-User-Id) en la ventana (por defecto 10 por minuto). Se reintenta pasados `Retry-After` segundos. */
+                429: {
+                    headers: {
+                        /** @description Segundos que faltan para que se reinicie la ventana */
+                        "Retry-After"?: number;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
                 /** @description Falta configuración del servidor (VONAGE_APPLICATION_ID) */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/incidents/{id}/visit-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * La técnica marca la visita como Completada o No completada (E1-02)
+         * @description COMPLETED → Visit COMPLETED + completedAt, Incident VIDEO_COMPLETED y SMS post-visita si no se enviaron ya. CANCELLED («No completada») → Visit CANCELLED, completedAt null, Incident VISIT_ASSIGNED, sin SMS. Se puede corregir COMPLETED ↔ CANCELLED mientras la incidencia no esté CLOSED. Si un SMS falla, la visita queda en el estado elegido y el resumen lo cuenta en `failed`.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "X-User-Id": components["parameters"]["UserId"];
+                    "X-User-Role": components["parameters"]["UserRole"];
+                };
+                path: {
+                    id: components["parameters"]["IncidentId"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["VisitStatusRequest"];
+                };
+            };
+            responses: {
+                /** @description Cambio aplicado o la visita ya estaba en ese estado */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["VisitStatusResponse"];
+                    };
+                };
+                /** @description Cabeceras o body inválidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No es la técnica asignada a esta incidencia (o el rol no es TECHNICIAN) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description La incidencia no existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description La incidencia está CLOSED o la visita no tiene sesión de vídeo */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error interno */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/incidents/{id}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * La gestora cierra la incidencia cuando la visita está completada (E3-02)
+         * @description «Informe listo» = Visit COMPLETED e Incident VIDEO_COMPLETED. No hay modelo de informe en el MVP Extended.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "X-User-Id": components["parameters"]["UserId"];
+                    "X-User-Role": components["parameters"]["UserRole"];
+                };
+                path: {
+                    id: components["parameters"]["IncidentId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Incidencia cerrada (o ya lo estaba) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CloseIncidentResponse"];
+                    };
+                };
+                /** @description Cabeceras inválidas */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No es la gestora asignada a esta incidencia (o el rol no es MANAGER) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description La incidencia no existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description La visita no está COMPLETED o la incidencia no está en VIDEO_COMPLETED («Report not ready») */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error interno */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/incidents/{id}/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Notificaciones (SMS) de una incidencia, sin teléfonos (E3-01) */
+        get: {
+            parameters: {
+                query?: never;
+                header: {
+                    "X-User-Id": components["parameters"]["UserId"];
+                    "X-User-Role": components["parameters"]["UserRole"];
+                };
+                path: {
+                    id: components["parameters"]["IncidentId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Lista de notificaciones (puede estar vacía) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["NotificationList"];
+                    };
+                };
+                /** @description Cabeceras inválidas */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description El usuario no participa en la incidencia */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description La incidencia no existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error interno */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/webhooks/video-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Session Monitoring de Vonage Video (A4; endurecido en E0-02, fallback en E1-04)
+         * @description Lo llama Vonage, no el frontend. Solo `sessionDestroyed` tiene efecto; el resto de eventos responde `ignored`.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["VideoEvent"];
+                };
+            };
+            responses: {
+                /** @description Evento procesado, repetido o ignorado */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["WebhookAck"];
+                    };
+                };
+                /** @description Payload inválido (sin `event`, o `sessionDestroyed` sin `sessionId`) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Firma ausente o inválida (X3) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Secreto de firma no configurado o error de base de datos */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/webhooks/message-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Estado de entrega de un SMS de Vonage Messages (B4 → E2-01)
+         * @description Lo llama Vonage, no el frontend. Solo actualiza Notification (nunca Incident ni Visit). submitted → SUBMITTED; delivered/read → DELIVERED (+ deliveredAt); rejected/undeliverable → FAILED (+ error). Nunca retrocede. `message_uuid` desconocido → `ignored`.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["MessageStatusEvent"];
+                };
+            };
+            responses: {
+                /** @description Estado aplicado, repetido o mensaje desconocido */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["WebhookAck"];
+                    };
+                };
+                /** @description Payload inválido */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Firma ausente o inválida (X3) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Secreto de firma no configurado o error de base de datos (Vonage reintenta) */
                 500: {
                     headers: {
                         [name: string]: unknown;
@@ -221,15 +658,85 @@ export interface components {
                 status: components["schemas"]["VisitStatus"];
                 /** Format: date-time */
                 scheduledAt: string;
+                /** Format: date-time */
+                completedAt?: string | null;
                 videoSession: null | {
                     id: string;
                     status: components["schemas"]["VideoSessionStatus"];
                 };
             };
         };
+        VisitStatusRequest: {
+            /** @enum {string} */
+            status: "COMPLETED" | "CANCELLED";
+        };
+        NotificationSummary: {
+            sent: number;
+            failed: number;
+            skipped: number;
+        };
+        VisitStatusResponse: {
+            /** @enum {string} */
+            status: "completed" | "not_completed" | "unchanged";
+            notifications?: components["schemas"]["NotificationSummary"];
+        };
+        CloseIncidentResponse: {
+            /** @enum {string} */
+            status: "closed" | "already_closed";
+        };
+        Notification: {
+            id: string;
+            recipient: {
+                id: string;
+                name: string;
+                role: components["schemas"]["Role"];
+            };
+            /** @enum {string} */
+            channel: "SMS";
+            status: components["schemas"]["NotificationStatus"];
+            template: string;
+            /** Format: date-time */
+            sentAt: string | null;
+            /** Format: date-time */
+            deliveredAt: string | null;
+            error: string | null;
+        };
+        NotificationList: {
+            notifications: components["schemas"]["Notification"][];
+        };
+        WebhookAck: {
+            /** @enum {string} */
+            status: "processed" | "already_processed" | "ignored";
+        };
+        VideoEvent: {
+            /** @description sessionCreated, connectionCreated, streamCreated, sessionDestroyed… */
+            event: string;
+            sessionId?: string;
+            /** @description En sessionDestroyed — clientDisconnected, forceDisconnected, mediaIdle o serverRotation */
+            reason?: string;
+        } & {
+            [key: string]: unknown;
+        };
+        MessageStatusEvent: {
+            message_uuid: string;
+            /** @description submitted, delivered, rejected, undeliverable (o read si el canal lo envía) */
+            status: string;
+            /** Format: date-time */
+            timestamp: string;
+            error?: {
+                title?: string;
+                detail?: string;
+            };
+        } & {
+            [key: string]: unknown;
+        };
     };
     responses: never;
-    parameters: never;
+    parameters: {
+        IncidentId: string;
+        UserId: string;
+        UserRole: components["schemas"]["Role"];
+    };
     requestBodies: never;
     headers: never;
     pathItems: never;

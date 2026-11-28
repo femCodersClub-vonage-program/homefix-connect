@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 
 import { HttpError } from '../api/client.js';
 import type {
@@ -8,10 +8,16 @@ import type {
 } from '../api/incidents.js';
 import { FinishToast } from '../components/FinishToast.js';
 import { JoinButton } from '../components/JoinButton.js';
-import { VideoCall } from '../components/VideoCall.js';
 import { useFinishToast } from '../hooks/useFinishToast.js';
 import { useIncident } from '../hooks/useIncident.js';
 import { useVideoToken } from '../hooks/useVideoToken.js';
+
+// E0-06: el SDK de Vonage Video (~3 MB) solo se descarga al entrar en la llamada.
+const VideoCall = lazy(() =>
+  import('../components/VideoCall.js').then((module) => ({
+    default: module.VideoCall,
+  })),
+);
 
 const incidentStatusLabels: Record<IncidentStatus, string> = {
   REPORTED: 'Reportada',
@@ -139,11 +145,19 @@ export default function IncidentDetail({ incidentId }: { incidentId: string }) {
       ) : null}
 
       {videoToken.data ? (
-        <VideoCall
-          applicationId={videoToken.data.applicationId}
-          sessionId={videoToken.data.sessionId}
-          token={videoToken.data.token}
-        />
+        <Suspense
+          fallback={
+            <p role="status" aria-live="polite">
+              Cargando la videollamada…
+            </p>
+          }
+        >
+          <VideoCall
+            applicationId={videoToken.data.applicationId}
+            sessionId={videoToken.data.sessionId}
+            token={videoToken.data.token}
+          />
+        </Suspense>
       ) : (
         <JoinButton
           incidentStatus={data.status}

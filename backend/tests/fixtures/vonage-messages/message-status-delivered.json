@@ -1,0 +1,9 @@
+{
+  "message_uuid": "aaaaaaaa-bbbb-cccc-dddd-0123456789ab",
+  "to": "34600000001",
+  "from": "Homefix",
+  "timestamp": "2026-11-25T20:00:05.000Z",
+  "status": "delivered",
+  "channel": "sms",
+  "usage": { "currency": "EUR", "price": "0.0333" }
+}
