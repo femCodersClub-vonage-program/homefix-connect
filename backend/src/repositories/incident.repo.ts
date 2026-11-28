@@ -1,4 +1,4 @@
-import type { Incident, IncidentStatus, Prisma } from '@prisma/client';
+import type { Incident, IncidentStatus, Prisma, VisitStatus } from '@prisma/client';
 
 export type IncidentWithRelations = Prisma.IncidentGetPayload<{
   include: {
@@ -10,9 +10,18 @@ export type IncidentWithRelations = Prisma.IncidentGetPayload<{
   };
 }>;
 
+/** E1-02: resultado de la visita que marca la técnica (visita + incidencia a la vez). */
+export type VisitOutcome = {
+  visitStatus: Extract<VisitStatus, 'COMPLETED' | 'CANCELLED'>;
+  completedAt: Date | null;
+  incidentStatus: IncidentStatus;
+};
+
 export interface IncidentRepo {
   findById(id: string): Promise<IncidentWithRelations | null>;
   updateStatus(id: string, status: IncidentStatus): Promise<Incident>;
+  /** E1-02: cambia `Visit.status`/`completedAt` e `Incident.status` en una sola transacción. */
+  updateVisitOutcome(incidentId: string, outcome: VisitOutcome): Promise<void>;
 }
 
 /**
@@ -42,5 +51,23 @@ export class InMemoryIncidentRepo implements IncidentRepo {
     const updated: IncidentWithRelations = { ...incident, status };
     this.incidents.set(id, updated);
     return updated;
+  }
+
+  async updateVisitOutcome(incidentId: string, outcome: VisitOutcome): Promise<void> {
+    const incident = this.incidents.get(incidentId);
+
+    if (!incident?.visit) {
+      throw new Error(`Visit for incident ${incidentId} not found`);
+    }
+
+    this.incidents.set(incidentId, {
+      ...incident,
+      status: outcome.incidentStatus,
+      visit: {
+        ...incident.visit,
+        status: outcome.visitStatus,
+        completedAt: outcome.completedAt,
+      },
+    });
   }
 }
