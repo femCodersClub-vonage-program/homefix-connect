@@ -8,6 +8,8 @@ import type { VideoSessionRepo } from "../repositories/video-session.repo.js";
 import type { PostVisitNotifier } from "../services/messaging.service.js";
 
 // A4 · Webhook de Session Monitoring de Vonage Video.
+// E0-02 · cierra siempre la sesión. E1-04 · fallback: completa también la visita.
+// Spec: specs/features/E1-04-webhook-fallback/02-specification.md
 // Spec: specs/features/A4-video-webhook/02-specification.md
 // Endurecido en E0-02: specs/features/E0-02-session-destroyed/02-specification.md
 
@@ -92,9 +94,17 @@ export function createVideoEventsRouter(deps: VideoEventsDeps) {
           session.status === "ACTIVE";
 
         if (visitStillOpen) {
+          // E1-04 · Red de seguridad: la técnica no marcó la visita (p. ej. cerró la
+          // pestaña). Se completa como haría «Finalizar visita» (E1-02): visita
+          // COMPLETED + completedAt e incidencia VIDEO_COMPLETED, en una transacción.
+          // La técnica puede corregirla después a No completada (D3).
           // Q4 (A4): primero se cierra la visita, después los SMS.
-          await incidentRepo.updateStatus(incidentId, "VIDEO_COMPLETED");
-          logger.info({ event, sessionId, incidentId, reason }, "visit completed by webhook");
+          await incidentRepo.updateVisitOutcome(incidentId, {
+            visitStatus: "COMPLETED",
+            completedAt: new Date(),
+            incidentStatus: "VIDEO_COMPLETED",
+          });
+          logger.info({ event, sessionId, incidentId, reason }, "visit completed by fallback");
 
           // Q3: si falla, la visita ya está cerrada; se registra y se responde 200.
           try {
@@ -120,9 +130,8 @@ export function createVideoEventsRouter(deps: VideoEventsDeps) {
           }
         }
 
-        // E0-02: la sesión se cierra SIEMPRE, pero al final: si cerrar la visita
-        // falla (500), el reintento de Vonage la encuentra aún ACTIVE y lo repite.
-        // Cerrándola antes, el reintento veía ENDED y la visita no se cerraba nunca.
+        // E0-02: la sesión se cierra SIEMPRE. E1-04: al final, para que si algo de lo
+        // anterior falla (500) el reintento de Vonage no vea ENDED y lo complete.
         await videoSessionRepo.update(session.id, {
           status: "ENDED",
           endedAt: new Date(),
