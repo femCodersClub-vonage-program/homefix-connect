@@ -5,7 +5,6 @@ import { NotificationAlreadyExistsError } from '../../src/repositories/notificat
 import { PrismaNotificationRepo } from '../../src/repositories/prisma-notification.repo.js';
 import { IDS, resetDatabase, seedPostVisitData } from './helpers/db.js';
 
-<<<<<<< HEAD
 // B5 · PrismaNotificationRepo contra Postgres real (INT-1 a INT-3).
 // E4-02 · unique por destinataria (INT-3 reescrito, INT-E4-1 e INT-E4-2).
 // E2-02 · findByProviderMessageId + updateStatus (INT-4, INT-5).

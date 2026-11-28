@@ -9,12 +9,14 @@ import { logger } from './lib/logger.js';
 import type { RateLimitOptions } from './middleware/rateLimitByUser.js';
 import { captureRawBody } from './lib/rawBody.js';
 import type { IncidentRepo } from './repositories/incident.repo.js';
+import type { NotificationRepo } from './repositories/notification.repo.js';
 import { PrismaIncidentRepo } from './repositories/prisma-incident.repo.js';
 import { PrismaNotificationRepo } from './repositories/prisma-notification.repo.js';
 import { PrismaVideoSessionRepo } from './repositories/prisma-video-session.repo.js';
 import type { VideoSessionRepo } from './repositories/video-session.repo.js';
 import { healthRouter } from './routes/health.js';
 import { createIncidentsRouter } from './routes/incidents.js';
+import { createMessageStatusRouter } from './routes/message-status.js';
 import { createVideoEventsRouter } from './routes/video-events.js';
 import { createVideoTokensRouter } from './routes/video-tokens.js';
 import { createVisitStatusRouter } from './routes/visit-status.js';
@@ -23,6 +25,7 @@ import {
   MessagingPostVisitNotifier,
   type PostVisitNotifier,
 } from './services/messaging.service.js';
+import { NotificationStatusService } from './services/notification-status.service.js';
 import type { VideoService } from './services/video.service.js';
 import { VisitStatusService } from './services/visit-status.service.js';
 import { createVonageVideoService } from './services/vonage-video.service.js';
@@ -37,6 +40,8 @@ export type AppDeps = {
   postVisitNotifier?: PostVisitNotifier;
   /** A4: secreto de firma de webhooks (los tests inyectan uno). */
   getSignatureSecret?: () => string | undefined;
+  /** E2-01: repo de notificaciones (los tests inyectan uno en memoria). */
+  notificationRepo?: NotificationRepo;
   /** E0-04: límite de POST /video-tokens (los tests inyectan uno con reloj falso). */
   videoTokensRateLimit?: RateLimitOptions;
 };
@@ -53,6 +58,8 @@ export function createApp(deps: AppDeps = {}) {
       privateKeyPath: env.VONAGE_PRIVATE_KEY_PATH,
     });
   const applicationId = deps.applicationId ?? env.VONAGE_APPLICATION_ID;
+  const notificationRepo =
+    deps.notificationRepo ?? new PrismaNotificationRepo(prisma);
   // A4: B1 (cliente Vonage Messages) + B2/B3 (sendPostVisit + Notification).
   // Sin credenciales arranca igual: los SMS quedan en FAILED.
   const postVisitNotifier =
@@ -64,7 +71,7 @@ export function createApp(deps: AppDeps = {}) {
         from: env.VONAGE_MESSAGES_FROM,
       }),
       incidentRepo,
-      notificationRepo: new PrismaNotificationRepo(prisma),
+      notificationRepo,
     });
 
   const app = express();
@@ -104,6 +111,15 @@ export function createApp(deps: AppDeps = {}) {
       incidentRepo,
       videoSessionRepo,
       postVisitNotifier,
+      getSignatureSecret: deps.getSignatureSecret,
+    }),
+  );
+
+  // E2-01: estados de entrega de los SMS (B4).
+  app.use(
+    '/api',
+    createMessageStatusRouter({
+      notificationStatusService: new NotificationStatusService(notificationRepo),
       getSignatureSecret: deps.getSignatureSecret,
     }),
   );
