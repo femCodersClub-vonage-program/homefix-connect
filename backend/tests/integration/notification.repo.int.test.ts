@@ -7,6 +7,7 @@ import { IDS, resetDatabase, seedPostVisitData } from './helpers/db.js';
 
 // B5 · PrismaNotificationRepo contra Postgres real (INT-1 a INT-3).
 // E4-02 · unique por destinataria (INT-3 reescrito, INT-E4-1 e INT-E4-2).
+// E2-02 · findByProviderMessageId + updateStatus (INT-4, INT-5).
 // Spec: specs/features/B5-messaging-tests/02-specification.md
 
 const repo = new PrismaNotificationRepo(prisma);
@@ -137,5 +138,40 @@ describe('PrismaNotificationRepo (integración)', () => {
 
     expect(error).toBeInstanceOf(Error);
     expect(error).not.toBeInstanceOf(NotificationAlreadyExistsError);
+  });
+
+  it('INT-4 · E2-02: findByProviderMessageId encuentra por message_uuid y null si no existe', async () => {
+    const created = await repo.create({
+      incidentId: IDS.incident,
+      recipientId: IDS.tenant,
+      template: 'post_visit',
+      status: 'QUEUED',
+      providerMessageId: 'msg-e2-02',
+      sentAt: new Date(),
+    });
+
+    expect((await repo.findByProviderMessageId('msg-e2-02'))?.id).toBe(created.id);
+    expect(await repo.findByProviderMessageId('no-existe')).toBeNull();
+  });
+
+  it('INT-5 · E2-02: updateStatus guarda estado, deliveredAt y error sin tocar el resto', async () => {
+    const created = await repo.create({
+      incidentId: IDS.incident,
+      recipientId: IDS.tenant,
+      template: 'post_visit',
+      status: 'QUEUED',
+      providerMessageId: 'msg-e2-02',
+      sentAt: new Date(),
+    });
+    const deliveredAt = new Date('2026-11-25T20:00:05.000Z');
+
+    await repo.updateStatus(created.id, { status: 'DELIVERED', deliveredAt, error: null });
+    const row = await prisma.notification.findUniqueOrThrow({ where: { id: created.id } });
+
+    expect(row.status).toBe('DELIVERED');
+    expect(row.deliveredAt).toEqual(deliveredAt);
+    expect(row.error).toBeNull();
+    expect(row.providerMessageId).toBe('msg-e2-02');
+    expect(row.sentAt).toEqual(created.sentAt);
   });
 });
