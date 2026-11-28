@@ -4,6 +4,7 @@ import {
   type NotificationCreate,
   NotificationAlreadyExistsError,
   type NotificationRepo,
+  type NotificationStatusUpdate,
 } from './notification.repo.js';
 
 /** E4-02: P2002 sobre la unique `[incidentId, template, recipientId]` (no sobre `providerMessageId`). */
@@ -41,5 +42,13 @@ export class PrismaNotificationRepo implements NotificationRepo {
       }
       throw error;
     }
+  }
+
+  async findByProviderMessageId(providerMessageId: string): Promise<Notification | null> {
+    return this.prisma.notification.findUnique({ where: { providerMessageId } });
+  }
+
+  async updateStatus(id: string, data: NotificationStatusUpdate): Promise<Notification> {
+    return this.prisma.notification.update({ where: { id }, data });
   }
 }
