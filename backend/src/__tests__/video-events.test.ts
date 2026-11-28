@@ -382,9 +382,31 @@ describe("POST /api/webhooks/video-events", () => {
     expect(postVisitNotifier.sendPostVisit).not.toHaveBeenCalled();
   });
 
-  it("E0-02 · si falla cerrar la visita → 500, sin SMS y la sesión sigue ACTIVE; el reintento la cierra", async () => {
+  // E1-04 · Fallback: la visita también queda COMPLETED (no solo la incidencia).
+  // Spec: specs/features/E1-04-webhook-fallback/02-specification.md
+  it("E1-04 CA-1 · fallback: visita COMPLETED + completedAt e incidencia VIDEO_COMPLETED", async () => {
+    const { app, incidentRepo, postVisitNotifier } = setup();
+    const update = vi.spyOn(incidentRepo, "updateVisitOutcome");
+
+    const res = await post(app, SESSION_DESTROYED);
+
+    expect(res.body).toEqual({ status: "processed" });
+    expect(update).toHaveBeenCalledOnce();
+    expect(update).toHaveBeenCalledWith("inc_demo", {
+      visitStatus: "COMPLETED",
+      completedAt: expect.any(Date),
+      incidentStatus: "VIDEO_COMPLETED",
+    });
+    const incident = await incidentRepo.findById("inc_demo");
+    expect(incident?.status).toBe("VIDEO_COMPLETED");
+    expect(incident?.visit?.status).toBe("COMPLETED");
+    expect(incident?.visit?.completedAt).toBeInstanceOf(Date);
+    expect(postVisitNotifier.sendPostVisit).toHaveBeenCalledOnce();
+  });
+
+  it("E1-04 CA-2 · si falla guardar la visita → 500, sin SMS y la sesión sigue abierta para el reintento", async () => {
     const { app, incidentRepo, videoSessionRepo, postVisitNotifier } = setup();
-    vi.spyOn(incidentRepo, "updateStatus").mockRejectedValueOnce(new Error("BD caída"));
+    vi.spyOn(incidentRepo, "updateVisitOutcome").mockRejectedValueOnce(new Error("BD caída"));
 
     const res = await post(app, SESSION_DESTROYED);
 
