@@ -20,6 +20,9 @@
 **Siguiente fila de la cola**: `A2` (`VideoService` real), `B1` y `C1`.
 **A1 no existe como tarea**: se absorbió en A2 (ver §6).
 
+> **Actualización 27/11:** C7 (alternar cámara) entra en el MVP; antes estaba
+> fuera de alcance en `MVP_EXTENDED.md`. Ver §7 y `PROJECT_STATUS.md`.
+
 ---
 
 ## 1. Qué está fijo y qué se refina
@@ -116,6 +119,11 @@ Solo estas son **dependencia dura**. Todas pequeñas.
 | **C4** | `VideoCall`: vídeo remoto + eventos | S | fase-1, frontend | C3 |
 | **C5** | Toast "Visita finalizada" | XS | fase-1, frontend | C1 (mock) |
 | **C6** | Tests frontend | S | fase-1, frontend, test | C2, C3, C4, C5 |
+| **C7** | Alternar cámara con `Publisher.cycleVideo()` | XS | fase-1, frontend | C3, C4 |
+
+> C7 entró en el MVP el 27/11/2026 (decisión registrada en
+> `docs/PROJECT_STATUS.md`). No recrea el publisher: eso colgaría al par vía
+> `streamDestroyed`.
 
 ## 8. Oleada 3 — Integración (semana 3-4)
 
@@ -152,7 +160,7 @@ Solo estas son **dependencia dura**. Todas pequeñas.
         ▼
 3. A3, A4, B2, B3, B4, C4, C5
         ▼
-4. A5, B5, C6                        (tests de cierre de carril)
+4. A5, B5, C6, C7                    (tests y cierre de carril)
         ▼
 5. I1 → I2
         │

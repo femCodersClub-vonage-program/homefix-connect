@@ -26,7 +26,7 @@ export function VideoCall({
 }: VideoCallProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const remoteContainerRef = useRef<HTMLDivElement>(null);
-  const { status, remoteConnected, hangup } = useVideoCall({
+  const { status, remoteConnected, hangup, switchCamera } = useVideoCall({
     applicationId,
     sessionId,
     token,
@@ -44,6 +44,15 @@ export function VideoCall({
       >
         {statusLabels[status]}
       </p>
+      <button
+        type="button"
+        className="video-call__camera"
+        aria-label="Alternar cámara"
+        disabled={status !== 'connected'}
+        onClick={switchCamera}
+      >
+        Alternar cámara
+      </button>
       <button
         type="button"
         className="video-call__hangup"

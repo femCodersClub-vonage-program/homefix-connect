@@ -4,6 +4,8 @@
 > **Documento de planificación.** No implementa nada por sí solo: fija qué se
 > añade al MVP, qué se corrige y en qué orden. Cualquier cambio de contrato o
 > schema requiere su PR `spec/` aprobado (`AGENTS.md` §2.9).
+> **Actualización 27/11:** C7 (alternar cámara) pasa al MVP base y sale de este
+> documento; se implementa con `Publisher.cycleVideo()` para no colgar al par.
 >
 > Documentos base: [`MVP_DEFINITION.md`](./MVP_DEFINITION.md),
 > [`PROJECT_STATUS.md`](./PROJECT_STATUS.md), [`ARCHITECTURE.md`](./ARCHITECTURE.md)
@@ -241,7 +243,6 @@ read          → DELIVERED (si el canal lo envía; SMS no)
 - Reintentos automáticos o manuales de SMS.
 - Reconexión automática de WebRTC.
 - Grabación, RCS/WhatsApp/Voice.
-- C7 (cámara frontal/trasera).
 - Migraciones formales: se usa `prisma db push`.
 
 ---
@@ -517,7 +518,7 @@ Dependencias críticas:
 | **#22** C6 tests frontend | Cerrar como cubierto por los 54 tests, o convertirlo en E0-05 |
 | **#24** I2 edge cases | Absorber en E0-03 (colgar) y E0-04 (rate limit); no mantener la rama docs-only |
 | **#15** B4 | Pasa a E2-01/E2-02; actualizar estados reales |
-| **#46** C7 cámara | Cerrar como fuera de alcance |
+| **#46** C7 cámara | Entra en el MVP base el 27/11; implementar con `cycleVideo()` (issue #46) |
 | **#38** contrato incidents | Se completa con E0-05 |
 | **#21** C5 toast | Se completa con E4-01 |
 
