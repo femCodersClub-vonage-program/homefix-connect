@@ -12,7 +12,7 @@ import {
   VIDEO_IDS,
 } from './helpers/video.js';
 
-// A5 · POST /api/webhooks/video-events con Prisma real (INT-V9 a INT-V13; E0-02: INT-V14/V15).
+// A5 · POST /api/webhooks/video-events con Prisma real (INT-V9 a INT-V13; E0-02: INT-V14/V15; E1-04: INT-E14-1…3).
 // Firma real (X3) con secreto de test; aviso post-visita real (B3) con SMS falsos.
 // Spec: specs/features/A5-video-tests/02-specification.md
 
@@ -174,5 +174,58 @@ describe('POST /api/webhooks/video-events con Postgres (integración)', () => {
     expect(incident.status).toBe('VISIT_ASSIGNED');
     expect(notifications).toHaveLength(0);
     expect(messaging.sendSms).not.toHaveBeenCalled();
+  });
+
+  // E1-04 · Fallback de visita y convivencia con visit-status (E1-02).
+  it('INT-E14-1 · fallback: la visita queda COMPLETED con completedAt en la BD', async () => {
+    await seedVideoVisitData(prisma, { sessionStatus: 'ACTIVE', vonageSessionId: VIDEO_IDS.vonageSession });
+    const { app } = createVideoTestApp();
+
+    await sendEvent(app, sessionDestroyed());
+
+    const visit = await prisma.visit.findUniqueOrThrow({ where: { id: VIDEO_IDS.visit } });
+    expect(visit.status).toBe('COMPLETED');
+    expect(visit.completedAt).toBeInstanceOf(Date);
+  });
+
+  it('INT-E14-2 · la técnica marcó No completada → el webhook solo cierra la sesión, sin SMS', async () => {
+    await seedVideoVisitData(prisma, { sessionStatus: 'ACTIVE', vonageSessionId: VIDEO_IDS.vonageSession });
+    const messaging = fakeMessaging();
+    const { app } = createVideoTestApp({ messaging });
+
+    await request(app)
+      .post(`/api/incidents/${IDS.incident}/visit-status`)
+      .set('X-User-Id', IDS.technician)
+      .set('X-User-Role', 'TECHNICIAN')
+      .send({ status: 'CANCELLED' });
+    const res = await sendEvent(app, sessionDestroyed());
+
+    expect(res.body).toEqual({ status: 'already_processed' });
+    const { session, incident, notifications } = await dbState();
+    expect(session.status).toBe('ENDED');
+    expect(incident.status).toBe('VISIT_ASSIGNED');
+    expect(notifications).toHaveLength(0);
+    expect(messaging.sendSms).not.toHaveBeenCalled();
+    const visit = await prisma.visit.findUniqueOrThrow({ where: { id: VIDEO_IDS.visit } });
+    expect(visit.status).toBe('CANCELLED');
+  });
+
+  it('INT-E14-3 · la técnica marcó Completada → el webhook cierra la sesión y no repite SMS', async () => {
+    await seedVideoVisitData(prisma, { sessionStatus: 'ACTIVE', vonageSessionId: VIDEO_IDS.vonageSession });
+    const messaging = fakeMessaging();
+    const { app } = createVideoTestApp({ messaging });
+
+    await request(app)
+      .post(`/api/incidents/${IDS.incident}/visit-status`)
+      .set('X-User-Id', IDS.technician)
+      .set('X-User-Role', 'TECHNICIAN')
+      .send({ status: 'COMPLETED' });
+    const res = await sendEvent(app, sessionDestroyed());
+
+    expect(res.body).toEqual({ status: 'already_processed' });
+    const { session, notifications } = await dbState();
+    expect(session.status).toBe('ENDED');
+    expect(notifications).toHaveLength(2);
+    expect(messaging.sendSms).toHaveBeenCalledTimes(2);
   });
 });

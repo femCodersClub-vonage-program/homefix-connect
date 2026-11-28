@@ -3,6 +3,7 @@ import type { Incident, IncidentStatus, PrismaClient } from "@prisma/client";
 import type {
   IncidentRepo,
   IncidentWithRelations,
+  VisitOutcome,
 } from "./incident.repo.js";
 
 export class PrismaIncidentRepo implements IncidentRepo {
@@ -26,5 +27,32 @@ export class PrismaIncidentRepo implements IncidentRepo {
 
   updateStatus(id: string, status: IncidentStatus): Promise<Incident> {
     return this.prisma.incident.update({ where: { id }, data: { status } });
+  }
+
+  async updateVisitOutcome(incidentId: string, outcome: VisitOutcome): Promise<void> {
+    // E1-02: visita e incidencia cambian juntas o no cambia ninguna.
+    await this.prisma.$transaction([
+      this.prisma.visit.update({
+        where: { incidentId },
+        data: { status: outcome.visitStatus, completedAt: outcome.completedAt },
+      }),
+      this.prisma.incident.update({
+        where: { id: incidentId },
+        data: { status: outcome.incidentStatus },
+      }),
+    ]);
+  }
+
+  async closeIfReportReady(incidentId: string): Promise<boolean> {
+    // E3-02: condición y cambio en el mismo UPDATE.
+    const { count } = await this.prisma.incident.updateMany({
+      where: {
+        id: incidentId,
+        status: "VIDEO_COMPLETED",
+        visit: { is: { status: "COMPLETED" } },
+      },
+      data: { status: "CLOSED" },
+    });
+    return count > 0;
   }
 }
