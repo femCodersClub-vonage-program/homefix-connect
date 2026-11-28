@@ -42,4 +42,17 @@ export class PrismaIncidentRepo implements IncidentRepo {
       }),
     ]);
   }
+
+  async closeIfReportReady(incidentId: string): Promise<boolean> {
+    // E3-02: condición y cambio en el mismo UPDATE.
+    const { count } = await this.prisma.incident.updateMany({
+      where: {
+        id: incidentId,
+        status: "VIDEO_COMPLETED",
+        visit: { is: { status: "COMPLETED" } },
+      },
+      data: { status: "CLOSED" },
+    });
+    return count > 0;
+  }
 }

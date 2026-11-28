@@ -22,6 +22,12 @@ export interface IncidentRepo {
   updateStatus(id: string, status: IncidentStatus): Promise<Incident>;
   /** E1-02: cambia `Visit.status`/`completedAt` e `Incident.status` en una sola transacción. */
   updateVisitOutcome(incidentId: string, outcome: VisitOutcome): Promise<void>;
+  /**
+   * E3-02: pasa la incidencia a CLOSED solo si sigue VIDEO_COMPLETED con la visita
+   * COMPLETED, en una sola operación (por si la técnica la corrige a la vez).
+   * Devuelve `false` si no se cumplía.
+   */
+  closeIfReportReady(incidentId: string): Promise<boolean>;
 }
 
 /**
@@ -69,5 +75,16 @@ export class InMemoryIncidentRepo implements IncidentRepo {
         completedAt: outcome.completedAt,
       },
     });
+  }
+
+  async closeIfReportReady(incidentId: string): Promise<boolean> {
+    const incident = this.incidents.get(incidentId);
+
+    if (incident?.status !== 'VIDEO_COMPLETED' || incident.visit?.status !== 'COMPLETED') {
+      return false;
+    }
+
+    this.incidents.set(incidentId, { ...incident, status: 'CLOSED' });
+    return true;
   }
 }

@@ -20,6 +20,7 @@ import { createMessageStatusRouter } from './routes/message-status.js';
 import { createVideoEventsRouter } from './routes/video-events.js';
 import { createVideoTokensRouter } from './routes/video-tokens.js';
 import { createVisitStatusRouter } from './routes/visit-status.js';
+import { createCloseIncidentRouter } from './routes/close-incident.js';
 import {
   createVonageMessagesClient,
   MessagingPostVisitNotifier,
@@ -27,6 +28,7 @@ import {
 } from './services/messaging.service.js';
 import { NotificationStatusService } from './services/notification-status.service.js';
 import type { VideoService } from './services/video.service.js';
+import { CloseIncidentService } from './services/close-incident.service.js';
 import { VisitStatusService } from './services/visit-status.service.js';
 import { createVonageVideoService } from './services/vonage-video.service.js';
 
@@ -130,6 +132,12 @@ export function createApp(deps: AppDeps = {}) {
     createVisitStatusRouter({
       visitStatusService: new VisitStatusService({ incidentRepo, postVisitNotifier }),
     }),
+  );
+
+  // E3-02: la gestora cierra la incidencia («informe listo»).
+  app.use(
+    '/api',
+    createCloseIncidentRouter({ closeIncidentService: new CloseIncidentService(incidentRepo) }),
   );
 
   app.use(notFoundHandler);
